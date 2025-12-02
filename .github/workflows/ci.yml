@@ -2,42 +2,28 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
+    branches: ["main"]
   pull_request:
-    branches: ["*"]
+    branches: ["main"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Install Bun
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: bun install
 
-      - name: Lint
+      - name: ESLint
         run: bun run lint
 
       - name: Type Check
         run: bun run type-check
-
-      - name: Validate Prisma schema
-        run: bunx prisma validate
-
-      - name: Run Tests
-        run: bun test

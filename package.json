@@ -9,6 +9,7 @@
     "type-check": "bun x tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/config": "^7.0.1",
     "elysia": "latest"
   },
   "devDependencies": {
