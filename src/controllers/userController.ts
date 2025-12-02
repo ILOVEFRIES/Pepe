@@ -1,8 +1,7 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, UserType } from "@prisma/client";
 import removeColumnPrefix from "../util/removeColumnPrefix";
 
 const db = new PrismaClient();
-type UserType = Prisma.UserType;
 
 export const userController = {
   // GET ALL USERS
