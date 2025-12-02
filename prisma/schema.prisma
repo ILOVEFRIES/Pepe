@@ -15,6 +15,7 @@ model user {
   u_id         Int       @id @default(autoincrement())
   u_email      String    @unique
   u_type       UserType
+  u_password   String
   u_created_at DateTime  @default(now())
   u_updated_at DateTime? @updatedAt
   u_is_deleted Boolean   @default(false)
