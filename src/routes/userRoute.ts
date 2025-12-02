@@ -1,11 +1,9 @@
 import { Elysia, t } from "elysia";
 import { userController } from "../controllers/userController";
-import type { $Enums } from "@prisma/client";
+import { UserType } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { cors } from "@elysiajs/cors";
 import { rateLimit } from "elysia-rate-limit";
-
-type UserType = $Enums.UserType;
 
 // Middleware to verify JWT and extract user
 const verifyAuth = (headers: Record<string, string | undefined>) => {
@@ -40,7 +38,6 @@ const hasPermission = (userType: UserType, requiredType: UserType[]) => {
 };
 
 export const userRoutes = new Elysia({ prefix: "/users" })
-
   // Add CORS
   .use(cors())
 
@@ -145,7 +142,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
         }
 
         // Check if user is admin
-        if (!hasPermission(auth.user!.type, ["admin"])) {
+        if (!hasPermission(auth.user!.type, [UserType.admin])) {
           set.status = 403;
           return {
             success: false,
@@ -191,7 +188,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
           // Check if user is viewing their own profile or is admin
           if (
             auth.user!.userId !== params.id &&
-            !hasPermission(auth.user!.type, ["admin"])
+            !hasPermission(auth.user!.type, [UserType.admin])
           ) {
             set.status = 403;
             return {
@@ -236,7 +233,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
           // Require at least one uppercase, one lowercase, one number
           pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
         }),
-        type: t.Union([t.Literal("admin"), t.Literal("customer")]),
+        type: t.Enum(UserType),
       }),
     },
     (guardApp) =>
@@ -412,7 +409,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
       }),
       body: t.Object({
         email: t.Optional(t.String({ format: "email" })),
-        type: t.Optional(t.Union([t.Literal("admin"), t.Literal("customer")])),
+        type: t.Optional(t.Enum(UserType)),
         is_deleted: t.Optional(t.Boolean()),
       }),
     },
@@ -430,7 +427,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 
           // Check permissions
           const isOwnProfile = auth.user!.userId === params.id;
-          const isAdmin = hasPermission(auth.user!.type, ["admin"]);
+          const isAdmin = hasPermission(auth.user!.type, [UserType.admin]);
 
           if (!isOwnProfile && !isAdmin) {
             set.status = 403;
@@ -512,7 +509,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
           }
 
           // Check if user is admin
-          if (!hasPermission(auth.user!.type, ["admin"])) {
+          if (!hasPermission(auth.user!.type, [UserType.admin])) {
             set.status = 403;
             return {
               success: false,
