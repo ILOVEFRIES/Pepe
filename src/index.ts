@@ -1,7 +1,16 @@
 import { Elysia } from "elysia";
+import { userRoutes } from "./routes/userRoute";
+import { logger } from "@bogeychan/elysia-logger";
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+const app = new Elysia()
+  .use(
+    logger({
+      level: "info",
+    })
+  )
+  .use(userRoutes)
+  .listen(process.env.SERVER_PORT || 9000);
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+  `Project-Name running at ${app.server?.hostname}:${app.server?.port}`
 );
