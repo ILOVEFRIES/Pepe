@@ -94,11 +94,9 @@ export const userRoutes = new Elysia({ prefix: "/users" })
         const token = jwt.sign(
           {
             userId: (user as { id: number }).id,
-            email: (user as { email: string }).email,
-            type: (user as { type: UserType }).type,
           },
           process.env.JWT_SECRET!,
-          { expiresIn: "7d" } // Token expires in 7 days
+          { expiresIn: "30d" } // Token expires in 7 days
         );
 
         return {
@@ -237,17 +235,8 @@ export const userRoutes = new Elysia({ prefix: "/users" })
       }),
     },
     (guardApp) =>
-      guardApp.post("/", async ({ headers, body, set }) => {
+      guardApp.post("/", async ({ body, set }) => {
         try {
-          const auth = verifyAuth(headers);
-          if (!auth.valid) {
-            set.status = 403;
-            return {
-              success: false,
-              message: auth.error,
-            };
-          }
-
           //   // Check if user is admin
           //   if (!hasPermission(auth.user!.type, [UserType.admin])) {
           //     set.status = 403;
