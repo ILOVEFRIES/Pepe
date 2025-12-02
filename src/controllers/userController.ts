@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client";
-import type { $Enums } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import removeColumnPrefix from "../util/removeColumnPrefix";
 
-type UserType = $Enums.UserType;
-
 const db = new PrismaClient();
+type UserType = Prisma.UserType;
 
 export const userController = {
   // GET ALL USERS

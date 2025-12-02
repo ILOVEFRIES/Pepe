@@ -11,6 +11,11 @@ datasource db {
 // ==========================================================
 // USER
 // ==========================================================
+enum UserType {
+  admin
+  customer
+}
+
 model user {
   u_id         Int       @id @default(autoincrement())
   u_email      String    @unique
@@ -25,10 +30,6 @@ model user {
   order        order[]
 }
 
-enum UserType {
-  admin
-  customer
-}
 
 //
 // ==========================================================
