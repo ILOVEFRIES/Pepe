@@ -9,6 +9,7 @@
     "type-check": "bun x tsc --noEmit"
   },
   "dependencies": {
+    "@bogeychan/elysia-logger": "^0.1.10",
     "@prisma/config": "^7.0.1",
     "elysia": "latest",
     "jsonwebtoken": "^9.0.2"
