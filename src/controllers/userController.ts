@@ -51,6 +51,28 @@ export const userController = {
     }
   },
 
+  // GET USER BY EMAIL WITH PASSWORD (for login)
+  getUserByEmailWithPassword: async (email: string) => {
+    try {
+      const result = await db.user.findFirst({
+        where: {
+          u_email: email,
+        },
+        select: {
+          u_id: true,
+          u_email: true,
+          u_password: true,
+          u_type: true,
+          u_is_deleted: true,
+        },
+      });
+      return result ? removeColumnPrefix(result) : null;
+    } catch (error) {
+      console.error("getUserByEmailWithPassword error:", error);
+      throw error;
+    }
+  },
+
   // CREATE USER
   createUser: async (data: {
     u_email: string;
@@ -107,6 +129,28 @@ export const userController = {
       return removeColumnPrefix(updated);
     } catch (error) {
       console.error("updateUser error:", error);
+      throw error;
+    }
+  },
+
+  // GET USER BY ID WITH PASSWORD (for password verification)
+  getUserByIdWithPassword: async (id: number) => {
+    try {
+      const result = await db.user.findFirst({
+        where: {
+          u_id: id,
+          u_is_deleted: false,
+        },
+        select: {
+          u_id: true,
+          u_email: true,
+          u_password: true,
+          u_type: true,
+        },
+      });
+      return result ? removeColumnPrefix(result) : null;
+    } catch (error) {
+      console.error("getUserByIdWithPassword error:", error);
       throw error;
     }
   },
