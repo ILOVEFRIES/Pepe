@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ==========================================================
+// USER
+// ==========================================================
+model user {
+  u_id         Int       @id @default(autoincrement())
+  u_email      String    @unique
+  u_type       UserType
+  u_created_at DateTime  @default(now())
+  u_updated_at DateTime? @updatedAt
+  u_is_deleted Boolean   @default(false)
+
+  // RELATIONS
+  outlet       outlet[]
+  order        order[]
+}
+
+enum UserType {
+  admin
+  customer
+}
+
+//
+// ==========================================================
+// OUTLET
+// ==========================================================
+model outlet {
+  o_id         Int       @id @default(autoincrement())
+  o_name       String    @unique
+  o_u_id       Int
+  o_tax        Float
+  o_sc         Float
+  o_created_at DateTime  @default(now())
+  o_updated_at DateTime  @updatedAt
+  o_is_deleted Boolean   @default(false)
+
+  // RELATIONS
+  user         user      @relation(fields: [o_u_id], references: [u_id], onDelete: Cascade, onUpdate: Cascade)
+  outlet_menu  outlet_menu[]
+  order        order[]
+}
+
+//
+// ==========================================================
+// MENU
+// ==========================================================
+model menu {
+  m_id                 Int             @id @default(autoincrement())
+  m_sku                String          @unique
+  m_name               String
+  m_desc               String
+
+  // Image fields
+  m_picture_path       String?         // ex: "uploads/menu/12345-burger.png"
+  m_picture_mime       String?         // ex: "image/png"
+  m_picture_size       Int?            // size in bytes
+  m_picture_original   String?         // original uploaded filename
+
+  m_category           String
+  m_is_deleted         Boolean         @default(false)
+
+  // RELATIONS
+  menu_subitem_childs   menu_subitem[]  @relation("ParentToChild")
+  menu_subitem_parents  menu_subitem[]  @relation("ChildToParent")
+  outlet_menu           outlet_menu[]
+}
+
+//
+// ==========================================================
+// MENU SUBITEM (many-to-many self relation)
+// ==========================================================
+model menu_subitem {
+  ms_id          Int   @id @default(autoincrement())
+
+  ms_parent_id   Int
+  parent_item    menu  @relation("ParentToChild", fields: [ms_parent_id], references: [m_id], onDelete: Cascade, onUpdate: Cascade)
+
+  ms_subitem_id  Int
+  subitem        menu  @relation("ChildToParent", fields: [ms_subitem_id], references: [m_id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+//
+// ==========================================================
+// OUTLET MENU
+// ==========================================================
+model outlet_menu {
+  om_id         Int       @id @default(autoincrement())
+  om_m_id       Int
+  om_o_id       Int
+  om_price      Float
+  om_created_at DateTime  @default(now())
+  om_updated_at DateTime  @updatedAt
+  om_is_deleted Boolean   @default(false)
+
+  // RELATIONS
+  menu          menu      @relation(fields: [om_m_id], references: [m_id], onDelete: Cascade, onUpdate: Cascade)
+  outlet        outlet    @relation(fields: [om_o_id], references: [o_id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+//
+// ==========================================================
+// ORDER
+// ==========================================================
+model order {
+  or_id          Int      @id @default(autoincrement())
+  or_uid         String   @unique
+  or_o_id        Int
+  or_table_no    String
+  or_u_id        Int
+  or_tax         Float
+  or_sc          Float
+  or_subtotal    Float
+  or_grand_total Float
+  or_order_item  String   @db.LongText
+
+  // RELATIONS
+  outlet         outlet   @relation(fields: [or_o_id], references: [o_id], onDelete: Cascade, onUpdate: Cascade)
+  user           user     @relation(fields: [or_u_id], references: [u_id], onDelete: Cascade, onUpdate: Cascade)
+}
