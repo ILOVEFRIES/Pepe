@@ -20,7 +20,7 @@ export const userController = {
         },
       });
 
-      return result.map((user) => removeColumnPrefix(user));
+      return result.map((user: unknown) => removeColumnPrefix(user));
     } catch (error) {
       console.error("getUsers error:", error);
       throw error;

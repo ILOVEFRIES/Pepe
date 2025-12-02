@@ -11,6 +11,7 @@
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.10",
     "@elysiajs/cors": "^1.4.0",
+    "@prisma/client": "5.16.2",
     "@prisma/config": "^7.0.1",
     "elysia": "latest",
     "elysia-rate-limit": "^4.4.2",
