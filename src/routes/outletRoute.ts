@@ -1,0 +1,227 @@
+import { Elysia, t } from "elysia";
+import { outletController } from "../controllers/outletController";
+import { UserType } from "@prisma/client";
+import jwt from "jsonwebtoken";
+import { cors } from "@elysiajs/cors";
+import { rateLimit } from "elysia-rate-limit";
+import { verifyAuth, hasPermission } from "../middleware/auth";
+
+// OUTLET ROUTES
+export const outletRoutes = new Elysia({ prefix: "/outlets" })
+  .use(cors())
+  .use(
+    rateLimit({
+      duration: 60000,
+      max: 100,
+    })
+  )
+
+  // GET ALL OUTLETS (Admin only)
+  .guard({}, (guardApp) =>
+    guardApp.get("/", async ({ headers, set }) => {
+      const auth = verifyAuth(headers);
+
+      if (!auth.valid) {
+        set.status = 403;
+        return { success: false, message: auth.error };
+      }
+
+      if (!hasPermission(auth.user!.type, [UserType.admin])) {
+        set.status = 403;
+        return { success: false, message: "Insufficient permissions" };
+      }
+
+      try {
+        const data = await outletController.getOutlets();
+        return { success: true, data };
+      } catch (error) {
+        console.error("Get outlets error:", error);
+        set.status = 500;
+        return { success: false, message: "Something went wrong" };
+      }
+    })
+  )
+
+  // GET OUTLET BY ID (Admin only)
+  .guard(
+    {
+      params: t.Object({
+        id: t.Numeric(),
+      }),
+    },
+    (guardApp) =>
+      guardApp.get("/:id", async ({ headers, params, set }) => {
+        const auth = verifyAuth(headers);
+
+        if (!auth.valid) {
+          set.status = 403;
+          return { success: false, message: auth.error };
+        }
+
+        if (!hasPermission(auth.user!.type, [UserType.admin])) {
+          set.status = 403;
+          return { success: false, message: "Insufficient permissions" };
+        }
+
+        try {
+          const outlet = await outletController.getOutletById(params.id);
+
+          if (!outlet) {
+            set.status = 404;
+            return { success: false, message: "Outlet not found" };
+          }
+
+          return { success: true, data: outlet };
+        } catch (error) {
+          console.error("Get outlet error:", error);
+          set.status = 500;
+          return { success: false, message: "Something went wrong" };
+        }
+      })
+  )
+
+  // CREATE OUTLET (Admin only)
+  .guard(
+    {
+      body: t.Object({
+        name: t.String(),
+        user_id: t.Numeric(),
+        tax: t.Numeric(),
+        sc: t.Numeric(),
+      }),
+    },
+    (guardApp) =>
+      guardApp.post("/", async ({ headers, body, set }) => {
+        const auth = verifyAuth(headers);
+
+        if (!auth.valid) {
+          set.status = 403;
+          return { success: false, message: auth.error };
+        }
+
+        if (!hasPermission(auth.user!.type, [UserType.admin])) {
+          set.status = 403;
+          return { success: false, message: "Insufficient permissions" };
+        }
+
+        try {
+          const result = await outletController.createOutlet({
+            o_name: body.name,
+            o_u_id: body.user_id,
+            o_tax: body.tax,
+            o_sc: body.sc,
+          });
+
+          return {
+            success: true,
+            message: "Outlet created successfully",
+            data: result,
+          };
+        } catch (error: any) {
+          console.error("Create outlet error:", error);
+
+          if (error.code === "P2002") {
+            set.status = 409;
+            return {
+              success: false,
+              message: "Duplicate outlet name/user",
+            };
+          }
+
+          set.status = 500;
+          return { success: false, message: "Something went wrong" };
+        }
+      })
+  )
+
+  // =============================
+  // UPDATE OUTLET (Admin only)
+  // =============================
+  .guard(
+    {
+      params: t.Object({ id: t.Numeric() }),
+      body: t.Object({
+        name: t.Optional(t.String()),
+        user_id: t.Optional(t.Numeric()),
+        tax: t.Optional(t.Numeric()),
+        sc: t.Optional(t.Numeric()),
+        is_deleted: t.Optional(t.Boolean()),
+      }),
+    },
+    (guardApp) =>
+      guardApp.put("/:id", async ({ headers, params, body, set }) => {
+        const auth = verifyAuth(headers);
+
+        if (!auth.valid) {
+          set.status = 403;
+          return { success: false, message: auth.error };
+        }
+
+        if (!hasPermission(auth.user!.type, [UserType.admin])) {
+          set.status = 403;
+          return { success: false, message: "Insufficient permissions" };
+        }
+
+        const updateData: any = {};
+        if (body.name !== undefined) updateData.o_name = body.name;
+        if (body.user_id !== undefined) updateData.o_u_id = body.user_id;
+        if (body.tax !== undefined) updateData.o_tax = body.tax;
+        if (body.sc !== undefined) updateData.o_sc = body.sc;
+        if (body.is_deleted !== undefined)
+          updateData.o_is_deleted = body.is_deleted;
+
+        try {
+          const updated = await outletController.updateOutlet(
+            params.id,
+            updateData
+          );
+
+          return {
+            success: true,
+            message: "Outlet updated successfully",
+            data: updated,
+          };
+        } catch (error) {
+          console.error("Update outlet error:", error);
+          set.status = 500;
+          return { success: false, message: "Something went wrong" };
+        }
+      })
+  )
+
+  // =============================
+  // TOGGLE DELETE STATUS (Admin only)
+  // =============================
+  .guard(
+    {
+      params: t.Object({ id: t.Numeric() }),
+    },
+    (guardApp) =>
+      guardApp.put("/:id/toggle", async ({ headers, params, set }) => {
+        const auth = verifyAuth(headers);
+
+        if (!auth.valid) {
+          set.status = 403;
+          return { success: false, message: auth.error };
+        }
+
+        if (!hasPermission(auth.user!.type, [UserType.admin])) {
+          set.status = 403;
+          return { success: false, message: "Insufficient permissions" };
+        }
+
+        try {
+          const updated = await outletController.toggleOutletDelete(params.id);
+
+          return {
+            success: true,
+            message: "Outlet delete status updated",
+            data: updated,
+          };
+        } catch (error) {
+          console.error("Toggle delete error:", error);
+          set.status = 500;
+          return { success: false, message: "Something went wrong" };
+        }
+      })
+  );

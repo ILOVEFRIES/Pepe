@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { userRoutes } from "./routes/userRoute";
+import { outletRoutes } from "./routes/outletRoute";
 import { logger } from "@bogeychan/elysia-logger";
 
 const app = new Elysia()
@@ -9,6 +10,7 @@ const app = new Elysia()
     })
   )
   .use(userRoutes)
+  .use(outletRoutes)
   .listen(process.env.SERVER_PORT || 9000);
 
 console.log(

@@ -4,38 +4,7 @@ import { UserType } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { cors } from "@elysiajs/cors";
 import { rateLimit } from "elysia-rate-limit";
-
-// Middleware to verify JWT and extract user
-const verifyAuth = (headers: Record<string, string | undefined>) => {
-  if (!headers.authorization) {
-    return { valid: false, error: "Authorization token required" };
-  }
-
-  try {
-    const token = headers.authorization.replace("Bearer ", "");
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      userId: number;
-      email: string;
-      type: UserType;
-      iat: number;
-      exp: number;
-    };
-
-    // Check if token is expired
-    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
-      return { valid: false, error: "Token expired" };
-    }
-
-    return { valid: true, user: decoded };
-  } catch {
-    return { valid: false, error: "Invalid token" };
-  }
-};
-
-// Middleware to check if user has permission
-const hasPermission = (userType: UserType, requiredType: UserType[]) => {
-  return requiredType.includes(userType);
-};
+import { verifyAuth, hasPermission } from "../middleware/auth";
 
 export const userRoutes = new Elysia({ prefix: "/users" })
   // Add CORS
