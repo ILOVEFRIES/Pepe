@@ -1,10 +1,10 @@
 import { Elysia, t } from "elysia";
 import { outletController } from "../controllers/outletController";
 import { UserType } from "@prisma/client";
-import jwt from "jsonwebtoken";
 import { cors } from "@elysiajs/cors";
 import { rateLimit } from "elysia-rate-limit";
 import { verifyAuth, hasPermission } from "../middleware/auth";
+import { Prisma } from "@prisma/client";
 
 // OUTLET ROUTES
 export const outletRoutes = new Elysia({ prefix: "/outlets" })
@@ -117,19 +117,24 @@ export const outletRoutes = new Elysia({ prefix: "/outlets" })
             message: "Outlet created successfully",
             data: result,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Create outlet error:", error);
 
-          if (error.code === "P2002") {
-            set.status = 409;
-            return {
-              success: false,
-              message: "Duplicate outlet name/user",
-            };
+          if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === "P2002") {
+              set.status = 409;
+              return {
+                success: false,
+                message: "Duplicate outlet name/user",
+              };
+            }
           }
 
           set.status = 500;
-          return { success: false, message: "Something went wrong" };
+          return {
+            success: false,
+            message: "Internal server error",
+          };
         }
       })
   )
@@ -162,7 +167,8 @@ export const outletRoutes = new Elysia({ prefix: "/outlets" })
           return { success: false, message: "Insufficient permissions" };
         }
 
-        const updateData: any = {};
+        const updateData: Record<string, unknown> = {};
+
         if (body.name !== undefined) updateData.o_name = body.name;
         if (body.user_id !== undefined) updateData.o_u_id = body.user_id;
         if (body.tax !== undefined) updateData.o_tax = body.tax;
