@@ -94,6 +94,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
         const token = jwt.sign(
           {
             userId: (user as { id: number }).id,
+            type: (user as { type: UserType }).type,
           },
           process.env.JWT_SECRET!,
           { expiresIn: "30d" } // Token expires in 7 days
