@@ -103,11 +103,6 @@ export const userRoutes = new Elysia({ prefix: "/users" })
           success: true,
           message: "Login successful",
           token,
-          user: {
-            id: (user as { id: number }).id,
-            email: (user as { email: string }).email,
-            type: (user as { type: UserType }).type,
-          },
         };
       } catch (error) {
         console.error("Login error:", error);
