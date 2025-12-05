@@ -19,168 +19,64 @@ export const userRoutes = new Elysia({ prefix: "/users" })
   )
 
   // LOGIN - Public route
-  .post(
-    "/login",
-    async ({ body, set }) => {
-      try {
-        // Get user by email with password
-        const user = await userController.getUserByEmailWithPassword(
-          body.email
-        );
-
-        if (!user) {
-          set.status = 401;
-          return {
-            success: false,
-            message: "Invalid credentials",
-          };
-        }
-
-        // Check if user is deleted
-        if ((user as { is_deleted: boolean }).is_deleted) {
-          set.status = 403;
-          return {
-            success: false,
-            message: "Account has been disabled",
-          };
-        }
-
-        // Verify password
-        const isPasswordValid = await Bun.password.verify(
-          body.password,
-          (user as { password: string }).password
-        );
-
-        if (!isPasswordValid) {
-          set.status = 401;
-          return {
-            success: false,
-            message: "Invalid credentials",
-          };
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-          {
-            userId: (user as { id: number }).id,
-            type: (user as { type: UserType }).type,
-          },
-          process.env.JWT_SECRET!,
-          { expiresIn: "30d" } // Token expires in 7 days
-        );
-
-        return {
-          success: true,
-          message: "Login successful",
-          token,
-        };
-      } catch (error) {
-        console.error("Login error:", error);
-        set.status = 500;
-        return {
-          success: false,
-          message: "Something went wrong",
-        };
-      }
-    },
+  .guard(
     {
       body: t.Object({
         email: t.String({ format: "email" }),
-        password: t.String({ minLength: 1 }),
-      }),
-    }
-  )
-
-  // GET ALL USERS - Admin only
-  .guard({}, (guardApp) =>
-    guardApp.get("/", async ({ headers, set }) => {
-      try {
-        const auth = verifyAuth(headers);
-        if (!auth.valid) {
-          set.status = 403;
-          return {
-            success: false,
-            message: auth.error,
-          };
-        }
-
-        // Check if user is admin
-        if (!hasPermission(auth.user!.type, [UserType.admin])) {
-          set.status = 403;
-          return {
-            success: false,
-            message: "Insufficient permissions",
-          };
-        }
-
-        const users = await userController.getUsers();
-        return {
-          success: true,
-          data: users,
-        };
-      } catch (error) {
-        console.error("Get users error:", error);
-        set.status = 500;
-        return {
-          success: false,
-          message: "Something went wrong",
-        };
-      }
-    })
-  )
-
-  // GET USER BY ID - Users can only view themselves unless admin
-  .guard(
-    {
-      params: t.Object({
-        id: t.Numeric(),
+        password: t.String(),
       }),
     },
     (guardApp) =>
-      guardApp.get("/:id", async ({ headers, params, set }) => {
+      guardApp.post("/login", async ({ body, set }) => {
         try {
-          const auth = verifyAuth(headers);
-          if (!auth.valid) {
-            set.status = 403;
-            return {
-              success: false,
-              message: auth.error,
-            };
-          }
-
-          // Check if user is viewing their own profile or is admin
-          if (
-            auth.user!.userId !== params.id &&
-            !hasPermission(auth.user!.type, [UserType.admin])
-          ) {
-            set.status = 403;
-            return {
-              success: false,
-              message: "Insufficient permissions",
-            };
-          }
-
-          const user = await userController.getUserById(params.id);
+          const user = await userController.getUserByEmailWithPassword(
+            body.email
+          );
 
           if (!user) {
-            set.status = 404;
-            return {
-              success: false,
-              message: "User not found",
-            };
+            set.status = 401;
+            return { success: false, message: "Invalid credentials" };
           }
+
+          if ((user as { is_deleted: boolean }).is_deleted) {
+            set.status = 403;
+            return { success: false, message: "Account has been disabled" };
+          }
+
+          const isPasswordValid = await Bun.password.verify(
+            body.password,
+            (user as { password: string }).password
+          );
+
+          if (!isPasswordValid) {
+            set.status = 401;
+            return { success: false, message: "Invalid credentials" };
+          }
+
+          const payload = {
+            userId: (user as { id: number }).id,
+            type: (user as { type: UserType }).type,
+          } as jwt.JwtPayload;
+
+          const options = {
+            expiresIn: process.env.JWT_EXPIRES ?? "30d",
+          } as jwt.SignOptions;
+
+          const token = jwt.sign(
+            payload,
+            process.env.JWT_SECRET as string,
+            options
+          );
 
           return {
             success: true,
-            data: user,
+            message: "Login successful",
+            token,
           };
         } catch (error) {
-          console.error("Get user error:", error);
+          console.error("Login error:", error);
           set.status = 500;
-          return {
-            success: false,
-            message: "Something went wrong",
-          };
+          return { success: false, message: "Something went wrong" };
         }
       })
   )
