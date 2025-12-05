@@ -139,9 +139,7 @@ export const outletRoutes = new Elysia({ prefix: "/outlets" })
       })
   )
 
-  // =============================
   // UPDATE OUTLET (Admin only)
-  // =============================
   .guard(
     {
       params: t.Object({ id: t.Numeric() }),
@@ -195,9 +193,7 @@ export const outletRoutes = new Elysia({ prefix: "/outlets" })
       })
   )
 
-  // =============================
   // TOGGLE DELETE STATUS (Admin only)
-  // =============================
   .guard(
     {
       params: t.Object({ id: t.Numeric() }),
