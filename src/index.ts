@@ -10,8 +10,7 @@ const app = new Elysia()
     })
   )
   .use(userRoutes)
-  .use(outletRoutes)
-  .listen(process.env.SERVER_PORT || 9000);
+  .use(outletRoutes);
 
 console.log(
   `Project-Name running at ${app.server?.hostname}:${app.server?.port}`
