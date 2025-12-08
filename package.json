@@ -1,12 +1,15 @@
 {
   "name": "Pepe",
   "version": "1.0.50",
-  "module": "src/index.js",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target=node",
+    "start": "node dist/index.js",
     "lint": "eslint .",
-    "type-check": "bun x tsc --noEmit"
+    "type-check": "bun x tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.10",
