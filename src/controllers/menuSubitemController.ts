@@ -55,7 +55,7 @@ export const menuSubitemController = {
         throw new Error("One or more menu items not found or deleted");
       }
 
-      // Prevent duplicates
+      // Prevent duplicates in menu_subitem
       const existing = await db.menu_subitem.findMany({
         where: {
           ms_parent_id: data.parentId,
@@ -76,10 +76,17 @@ export const menuSubitemController = {
         return [];
       }
 
-      await db.menu_subitem.createMany({
-        data: toCreate,
-        skipDuplicates: true, // safety
-      });
+      // Use a transaction to add subitems and mark them as m_is_subitem
+      await db.$transaction([
+        db.menu_subitem.createMany({
+          data: toCreate,
+          skipDuplicates: true,
+        }),
+        db.menu.updateMany({
+          where: { m_id: { in: data.subitemIds } },
+          data: { m_is_subitem: true },
+        }),
+      ]);
 
       return toCreate.map(removeColumnPrefix);
     } catch (error) {
