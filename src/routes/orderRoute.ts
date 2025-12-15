@@ -86,44 +86,6 @@ export function orderRoutes(app: any) {
       // GET ORDERS BY OUTLET ID (Admin only)
       .guard(
         {
-          params: t.Object({
-            outletId: t.Numeric(),
-          }),
-        },
-        (guardApp: any) =>
-          guardApp.get(
-            "/outlet/:outletId",
-            async ({ headers, params, set }: any) => {
-              const auth = verifyAuth(headers);
-
-              if (!auth.valid) {
-                set.status = 403;
-                return { success: false, message: auth.error };
-              }
-
-              if (!hasPermission(auth.user!.type, [UserType.admin])) {
-                set.status = 403;
-                return { success: false, message: "Insufficient permissions" };
-              }
-
-              try {
-                const data = await orderController.getOrdersByOutletId(
-                  params.outletId
-                );
-
-                return { success: true, data };
-              } catch (error) {
-                console.error("Get orders by outlet error:", error);
-                set.status = 500;
-                return { success: false, message: "Something went wrong" };
-              }
-            }
-          )
-      )
-
-      // CREATE ORDER (Admin & Customer)
-      .guard(
-        {
           body: t.Object({
             uid: t.String(),
             outlet_id: t.Numeric(),
@@ -133,14 +95,6 @@ export function orderRoutes(app: any) {
               t.Object({
                 menu_id: t.Numeric(),
                 quantity: t.Numeric(),
-                additionals: t.Optional(
-                  t.Array(
-                    t.Object({
-                      additional_id: t.Numeric(),
-                      quantity: t.Numeric(),
-                    })
-                  )
-                ),
               })
             ),
           }),
@@ -165,104 +119,123 @@ export function orderRoutes(app: any) {
             }
 
             try {
-              // GET OUTLET (for tax & service charge)
-              const outlet = await db.outlet.findUnique({
-                where: { o_id: body.outlet_id },
-                select: {
-                  o_tax: true,
-                  o_sc: true,
-                },
-              });
-
-              if (!outlet) {
-                set.status = 404;
-                return { success: false, message: "Outlet not found" };
-              }
-
-              // CALCULATE SUBTOTAL
-              let subtotal = 0;
-
-              const detailedItems = [];
-
-              for (const item of body.order_item) {
-                const outletMenu = await db.outlet_menu.findFirst({
-                  where: {
-                    om_m_id: item.menu_id,
-                    om_o_id: body.outlet_id,
-                    om_is_deleted: false,
-                  },
-                  select: {
-                    om_price: true,
-                  },
+              const result = await db.$transaction(async (tx) => {
+                /* ---------------------------------------------
+             1. GET OUTLET (TAX & SC)
+            --------------------------------------------- */
+                const outlet = await tx.outlet.findUnique({
+                  where: { o_id: body.outlet_id },
+                  select: { o_tax: true, o_sc: true },
                 });
 
-                if (!outletMenu) {
-                  set.status = 400;
-                  return {
-                    success: false,
-                    message: `Menu ${item.menu_id} not available in outlet`,
-                  };
+                if (!outlet) throw new Error("Outlet not found");
+
+                let subtotal = 0;
+                const detailedItems: any[] = [];
+
+                /* ---------------------------------------------
+             2. PRICE + STOCK CHECK & DEDUCTION
+            --------------------------------------------- */
+                for (const item of body.order_item) {
+                  const outletMenu = await tx.outlet_menu.findFirst({
+                    where: {
+                      om_m_id: item.menu_id,
+                      om_o_id: body.outlet_id,
+                      om_is_deleted: false,
+                    },
+                    select: {
+                      om_id: true,
+                      om_price: true,
+                      om_stock: true,
+                    },
+                  });
+
+                  if (!outletMenu) {
+                    throw new Error(`Menu ${item.menu_id} not available`);
+                  }
+
+                  // STOCK CHECK
+                  if (
+                    outletMenu.om_stock !== null &&
+                    outletMenu.om_stock < item.quantity
+                  ) {
+                    throw new Error(
+                      `Insufficient stock for menu ${item.menu_id}`
+                    );
+                  }
+
+                  // DEDUCT STOCK (ONLY IF NOT NULL)
+                  if (outletMenu.om_stock !== null) {
+                    await tx.outlet_menu.update({
+                      where: { om_id: outletMenu.om_id },
+                      data: {
+                        om_stock: outletMenu.om_stock - item.quantity,
+                      },
+                    });
+                  }
+
+                  const itemTotal = outletMenu.om_price * item.quantity;
+                  subtotal += itemTotal;
+
+                  detailedItems.push({
+                    menu_id: item.menu_id,
+                    quantity: item.quantity,
+                    price: outletMenu.om_price,
+                    total: itemTotal,
+                  });
                 }
 
-                const itemTotal = outletMenu.om_price * item.quantity;
-                subtotal += itemTotal;
+                /* ---------------------------------------------
+             3. SERVICE → TAX → GRAND TOTAL
+            --------------------------------------------- */
+                const serviceCharge = subtotal * outlet.o_sc;
+                const tax = (subtotal + serviceCharge) * outlet.o_tax;
+                const grandTotal = subtotal + serviceCharge + tax;
 
-                detailedItems.push({
-                  menu_id: item.menu_id,
-                  quantity: item.quantity,
-                  price: outletMenu.om_price,
-                  total: itemTotal,
-                  additionals: item.additionals ?? [],
+                /* ---------------------------------------------
+             4. BUILD ORDER ITEM JSON
+            --------------------------------------------- */
+                const orderItemPayload = {
+                  items: detailedItems,
+                  summary: {
+                    subtotal: formatGrandTotal(subtotal),
+                    service_charge: formatGrandTotal(serviceCharge),
+                    tax: formatGrandTotal(tax),
+                    grand_total: formatGrandTotal(grandTotal),
+                  },
+                };
+
+                /* ---------------------------------------------
+             5. CREATE ORDER
+            --------------------------------------------- */
+                return orderController.createOrder({
+                  or_uid: body.uid,
+                  or_o_id: body.outlet_id,
+                  or_table_no: body.table_no,
+                  or_u_id: body.user_id,
+
+                  or_tax: outlet.o_tax,
+                  or_sc: outlet.o_sc,
+                  or_subtotal: Math.ceil(subtotal),
+                  or_grand_total: Math.ceil(grandTotal),
+
+                  or_order_item: JSON.stringify(orderItemPayload),
                 });
-              }
-
-              // SERVICE CHARGE (FROM SUBTOTAL)
-              const serviceCharge = subtotal * outlet.o_sc;
-
-              // TAX (FROM SUBTOTAL + SERVICE)
-              const taxableAmount = subtotal + serviceCharge;
-              const taxAmount = taxableAmount * outlet.o_tax;
-
-              // GRAND TOTAL
-              const grandTotal = taxableAmount + taxAmount;
-
-              // BUILD ORDER ITEM (FORMATTED)
-              const orderItemPayload = {
-                items: detailedItems,
-                summary: {
-                  subtotal: formatGrandTotal(subtotal),
-                  service_charge: formatGrandTotal(serviceCharge),
-                  tax: formatGrandTotal(taxAmount),
-                  grand_total: formatGrandTotal(grandTotal),
-                },
-              };
-
-              // CREATE ORDER (CONTROLLER)
-              const created = await orderController.createOrder({
-                or_uid: body.uid,
-                or_o_id: body.outlet_id,
-                or_table_no: body.table_no,
-                or_u_id: body.user_id,
-
-                // numeric (for reports)
-                or_tax: outlet.o_tax,
-                or_sc: outlet.o_sc,
-                or_subtotal: Math.ceil(subtotal),
-                or_grand_total: Math.ceil(grandTotal),
-
-                // formatted + detail
-                or_order_item: JSON.stringify(orderItemPayload),
               });
 
               return {
                 success: true,
                 message: "Order created successfully",
-                data: created,
+                data: result,
               };
-            } catch (error) {
+            } catch (error: any) {
               console.error("Create order error:", error);
-              set.status = 500;
-              return { success: false, message: "Internal server error" };
+
+              set.status = 400;
+              return {
+                success: false,
+                message: error.message ?? "Order creation failed",
+              };
             }
           })
       )
