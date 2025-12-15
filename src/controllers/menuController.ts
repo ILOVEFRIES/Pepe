@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import removeColumnPrefix from "../util/removeColumnPrefix";
+import type { MenuDTO } from "../dto/menu.dto";
+import { removeColumnPrefix } from "../util/removeColumnPrefix";
 
 const db = new PrismaClient();
 
@@ -30,7 +31,7 @@ export const menuController = {
   },
 
   // GET MENU BY ID
-  getMenuById: async (id: number) => {
+  getMenuById: async (id: number): Promise<MenuDTO | null> => {
     try {
       const result = await db.menu.findFirst({
         where: {
@@ -48,7 +49,10 @@ export const menuController = {
         },
       });
 
-      return result ? removeColumnPrefix(result) : null;
+      if (!result) return null;
+
+      const menu = removeColumnPrefix(result) as MenuDTO;
+      return menu;
     } catch (error) {
       console.error("getMenuById error:", error);
       throw error;
@@ -99,8 +103,8 @@ export const menuController = {
       m_sku: string;
       m_name: string;
       m_desc: string;
-      m_picture_url?: string;
-      m_picture_path?: string;
+      m_picture_url: string;
+      m_picture_path: string;
       m_category: string;
     }>
   ) => {
@@ -108,16 +112,18 @@ export const menuController = {
       const updated = await db.menu.update({
         where: { m_id: id },
         data: {
-          ...(data.m_sku && { m_sku: data.m_sku }),
-          ...(data.m_name && { m_name: data.m_name }),
-          ...(data.m_desc && { m_desc: data.m_desc }),
+          ...(data.m_sku !== undefined && { m_sku: data.m_sku }),
+          ...(data.m_name !== undefined && { m_name: data.m_name }),
+          ...(data.m_desc !== undefined && { m_desc: data.m_desc }),
           ...(data.m_picture_url !== undefined && {
             m_picture_url: data.m_picture_url,
           }),
           ...(data.m_picture_path !== undefined && {
             m_picture_path: data.m_picture_path,
           }),
-          ...(data.m_category && { m_category: data.m_category }),
+          ...(data.m_category !== undefined && {
+            m_category: data.m_category,
+          }),
         },
         select: {
           m_id: true,
