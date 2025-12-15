@@ -134,7 +134,7 @@ export const outletMenuController = {
     om_m_id: number;
     om_o_id: number;
     om_price: number;
-    om_stock: number;
+    om_stock?: number;
     om_is_selling?: boolean;
   }) => {
     try {
@@ -143,7 +143,11 @@ export const outletMenuController = {
           om_m_id: data.om_m_id,
           om_o_id: data.om_o_id,
           om_price: data.om_price,
-          om_stock: data.om_stock,
+
+          ...(data.om_stock !== undefined && {
+            om_stock: data.om_stock,
+          }),
+
           om_is_selling: data.om_is_selling ?? true,
         },
         select: {
