@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { removeColumnPrefix } from "../util/removeColumnPrefix";
+import { ulid } from "ulid";
 
 const db = new PrismaClient();
 
@@ -114,7 +115,6 @@ export const orderController = {
 
   // CREATE ORDER
   createOrder: async (data: {
-    or_uid: string;
     or_o_id: number;
     or_table_no: string;
     or_u_id: number;
@@ -127,7 +127,7 @@ export const orderController = {
     try {
       const created = await db.order.create({
         data: {
-          or_uid: data.or_uid,
+          or_uid: ulid(),
           or_o_id: data.or_o_id,
           or_table_no: data.or_table_no,
           or_u_id: data.or_u_id,

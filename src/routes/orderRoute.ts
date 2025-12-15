@@ -87,7 +87,6 @@ export function orderRoutes(app: any) {
       .guard(
         {
           body: t.Object({
-            uid: t.String(),
             outlet_id: t.Numeric(),
             table_no: t.String(),
             user_id: t.Numeric(),
@@ -120,9 +119,7 @@ export function orderRoutes(app: any) {
 
             try {
               const result = await db.$transaction(async (tx) => {
-                /* ---------------------------------------------
-             1. GET OUTLET (TAX & SC)
-            --------------------------------------------- */
+                // GET OUTLET (TAX & SC)
                 const outlet = await tx.outlet.findUnique({
                   where: { o_id: body.outlet_id },
                   select: { o_tax: true, o_sc: true },
@@ -133,9 +130,7 @@ export function orderRoutes(app: any) {
                 let subtotal = 0;
                 const detailedItems: any[] = [];
 
-                /* ---------------------------------------------
-             2. PRICE + STOCK CHECK & DEDUCTION
-            --------------------------------------------- */
+                // PRICE + STOCK CHECK & DEDUCTION
                 for (const item of body.order_item) {
                   const outletMenu = await tx.outlet_menu.findFirst({
                     where: {
@@ -185,16 +180,12 @@ export function orderRoutes(app: any) {
                   });
                 }
 
-                /* ---------------------------------------------
-             3. SERVICE → TAX → GRAND TOTAL
-            --------------------------------------------- */
+                // SERVICE → TAX → GRAND TOTAL
                 const serviceCharge = subtotal * outlet.o_sc;
                 const tax = (subtotal + serviceCharge) * outlet.o_tax;
                 const grandTotal = subtotal + serviceCharge + tax;
 
-                /* ---------------------------------------------
-             4. BUILD ORDER ITEM JSON
-            --------------------------------------------- */
+                // BUILD ORDER ITEM JSON
                 const orderItemPayload = {
                   items: detailedItems,
                   summary: {
@@ -205,11 +196,8 @@ export function orderRoutes(app: any) {
                   },
                 };
 
-                /* ---------------------------------------------
-             5. CREATE ORDER
-            --------------------------------------------- */
+                // CREATE ORDER
                 return orderController.createOrder({
-                  or_uid: body.uid,
                   or_o_id: body.outlet_id,
                   or_table_no: body.table_no,
                   or_u_id: body.user_id,
