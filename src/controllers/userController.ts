@@ -1,5 +1,5 @@
 import { PrismaClient, UserType } from "@prisma/client";
-import removeColumnPrefix from "../util/removeColumnPrefix";
+import { removeColumnPrefix } from "../util/removeColumnPrefix";
 
 const db = new PrismaClient();
 
