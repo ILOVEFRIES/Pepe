@@ -134,7 +134,7 @@ export function outletMenuRoutes(app: any) {
             menu_id: t.Numeric(),
             outlet_id: t.Numeric(),
             price: t.Numeric(),
-            stock: t.Numeric(),
+            stock: t.Optional(t.Numeric()),
             is_selling: t.Optional(t.Boolean()),
           }),
         },
