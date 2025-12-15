@@ -6,4 +6,5 @@ export type MenuDTO = {
   picture_url: string | null;
   picture_path: string | null;
   category: string;
+  is_deleted: boolean;
 };

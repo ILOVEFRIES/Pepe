@@ -223,8 +223,10 @@ export function menuRoutes(app: any) {
                     return { success: false, message: "Menu not found" };
                   }
 
-                  let pictureUrl = menu.picture_url;
-                  let picturePath = menu.picture_path;
+                  let pictureUrl: string | undefined =
+                    menu.picture_url ?? undefined;
+                  let picturePath: string | undefined =
+                    menu.picture_path ?? undefined;
 
                   if (body.image) {
                     if (picturePath) {
