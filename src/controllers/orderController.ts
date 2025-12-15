@@ -136,7 +136,7 @@ export const orderController = {
           or_sc: data.or_sc,
           or_subtotal: data.or_subtotal,
           or_grand_total: data.or_grand_total,
-          or_order_item: JSON.stringify(data.or_order_item),
+          or_order_item: data.or_order_item,
         },
         select: {
           or_id: true,
@@ -155,6 +155,50 @@ export const orderController = {
       return removeColumnPrefix(created);
     } catch (error) {
       console.error("createOrder error:", error);
+      throw error;
+    }
+  },
+
+  // GET ORDER BY UID
+  getOrderByUid: async (uid: string) => {
+    try {
+      const result = await db.order.findFirst({
+        where: {
+          or_uid: uid,
+        },
+        select: {
+          or_id: true,
+          or_uid: true,
+          or_o_id: true,
+          or_table_no: true,
+          or_u_id: true,
+          or_tax: true,
+          or_sc: true,
+          or_subtotal: true,
+          or_grand_total: true,
+          or_order_item: true,
+          or_created_at: true,
+
+          outlet: {
+            select: {
+              o_id: true,
+              o_name: true,
+            },
+          },
+          user: {
+            select: {
+              u_id: true,
+              u_email: true,
+            },
+          },
+        },
+      });
+
+      if (!result) return null;
+
+      return removeColumnPrefix(parseOrderItem(result));
+    } catch (error) {
+      console.error("getOrderByUid error:", error);
       throw error;
     }
   },
