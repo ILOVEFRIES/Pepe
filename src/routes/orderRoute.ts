@@ -4,7 +4,7 @@ import formatGrandTotal from "../util/formatGrandTotal";
 import { UserType } from "@prisma/client";
 import { rateLimit } from "elysia-rate-limit";
 import { verifyAuth, hasPermission } from "../middleware/auth";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 export const db = new PrismaClient();
 
@@ -94,6 +94,15 @@ export function orderRoutes(app: any) {
               t.Object({
                 menu_id: t.Numeric(),
                 quantity: t.Numeric(),
+
+                subitems: t.Optional(
+                  t.Array(
+                    t.Object({
+                      menu_id: t.Numeric(),
+                      quantity: t.Numeric(),
+                    })
+                  )
+                ),
               })
             ),
           }),
@@ -132,6 +141,7 @@ export function orderRoutes(app: any) {
 
                 // PRICE + STOCK CHECK & DEDUCTION
                 for (const item of body.order_item) {
+                  // MAIN ITEM
                   const outletMenu = await tx.outlet_menu.findFirst({
                     where: {
                       om_m_id: item.menu_id,
@@ -149,7 +159,7 @@ export function orderRoutes(app: any) {
                     throw new Error(`Menu ${item.menu_id} not available`);
                   }
 
-                  // STOCK CHECK
+                  // MAIN ITEM STOCK
                   if (
                     outletMenu.om_stock !== null &&
                     outletMenu.om_stock < item.quantity
@@ -159,7 +169,6 @@ export function orderRoutes(app: any) {
                     );
                   }
 
-                  // DEDUCT STOCK (ONLY IF NOT NULL)
                   if (outletMenu.om_stock !== null) {
                     await tx.outlet_menu.update({
                       where: { om_id: outletMenu.om_id },
@@ -169,7 +178,60 @@ export function orderRoutes(app: any) {
                     });
                   }
 
-                  const itemTotal = outletMenu.om_price * item.quantity;
+                  let itemTotal = outletMenu.om_price * item.quantity;
+                  const subitemsPayload: any[] = [];
+
+                  // SUBITEMS
+                  if (item.subitems?.length) {
+                    for (const sub of item.subitems) {
+                      const subMenu = await tx.outlet_menu.findFirst({
+                        where: {
+                          om_m_id: sub.menu_id,
+                          om_o_id: body.outlet_id,
+                          om_is_deleted: false,
+                        },
+                        select: {
+                          om_id: true,
+                          om_price: true,
+                          om_stock: true,
+                        },
+                      });
+
+                      if (!subMenu) {
+                        throw new Error(`Subitem ${sub.menu_id} not available`);
+                      }
+
+                      // SUBITEM STOCK
+                      if (
+                        subMenu.om_stock !== null &&
+                        subMenu.om_stock < sub.quantity
+                      ) {
+                        throw new Error(
+                          `Insufficient stock for subitem ${sub.menu_id}`
+                        );
+                      }
+
+                      if (subMenu.om_stock !== null) {
+                        await tx.outlet_menu.update({
+                          where: { om_id: subMenu.om_id },
+                          data: {
+                            om_stock: subMenu.om_stock - sub.quantity,
+                          },
+                        });
+                      }
+
+                      const subTotal = subMenu.om_price * sub.quantity;
+                      itemTotal += subTotal;
+
+                      subitemsPayload.push({
+                        menu_id: sub.menu_id,
+                        quantity: sub.quantity,
+                        price: subMenu.om_price,
+                        total: subTotal,
+                      });
+                    }
+                  }
+
                   subtotal += itemTotal;
 
                   detailedItems.push({
@@ -177,6 +239,7 @@ export function orderRoutes(app: any) {
                     quantity: item.quantity,
                     price: outletMenu.om_price,
                     total: itemTotal,
+                    subitems: subitemsPayload,
                   });
                 }
 
