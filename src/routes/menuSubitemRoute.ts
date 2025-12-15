@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { UserType, Prisma } from "@prisma/client";
+import { UserType } from "@prisma/client";
 import { rateLimit } from "elysia-rate-limit";
 import { verifyAuth, hasPermission } from "../middleware/auth";
 import { menuSubitemController } from "../controllers/menuSubitemController";
