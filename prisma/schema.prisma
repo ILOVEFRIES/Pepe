@@ -123,6 +123,9 @@ model order {
   or_subtotal    Float
   or_grand_total Float
   or_order_item  String   @db.LongText
+  or_created_at  DateTime @default(now())
+  or_updated_at  DateTime @updatedAt
+
 
   // RELATIONS
   outlet         outlet   @relation(fields: [or_o_id], references: [o_id], onDelete: Cascade, onUpdate: Cascade)
