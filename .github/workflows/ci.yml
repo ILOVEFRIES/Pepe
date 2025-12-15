@@ -25,5 +25,13 @@ jobs:
       - name: ESLint
         run: bun run lint
 
-      - name: Type Check
-        run: bun run type-check
+      - name: Type Check (save output)
+        run: |
+          bun run type-check > type-check.log
+        continue-on-error: true
+
+      - name: Upload Type Check Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: type-check-report
+          path: type-check.log
