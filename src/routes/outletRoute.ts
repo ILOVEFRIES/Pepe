@@ -199,7 +199,7 @@ export function outletRoutes(app: Elysia) {
           params: t.Object({ id: t.Numeric() }),
         },
         (guardApp) =>
-          guardApp.put("/:id/toggle", async ({ headers, params, set }) => {
+          guardApp.delete("/:id", async ({ headers, params, set }) => {
             const auth = verifyAuth(headers);
 
             if (!auth.valid) {

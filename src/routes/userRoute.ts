@@ -352,69 +352,66 @@ export function userRoutes(app: Elysia) {
           }),
         },
         (guardApp) =>
-          guardApp.patch(
-            "/:id/toggle-delete",
-            async ({ headers, params, set }) => {
-              try {
-                const auth = verifyAuth(headers);
-                if (!auth.valid) {
-                  set.status = 403;
-                  return {
-                    success: false,
-                    message: auth.error,
-                  };
-                }
-
-                // Check if user is admin
-                if (!hasPermission(auth.user!.type, [UserType.admin])) {
-                  set.status = 403;
-                  return {
-                    success: false,
-                    message: "Insufficient permissions",
-                  };
-                }
-
-                // Prevent users from deleting themselves
-                if (auth.user!.userId === params.id) {
-                  set.status = 403;
-                  return {
-                    success: false,
-                    message: "Cannot delete your own account",
-                  };
-                }
-
-                const user = await userController.toggleUserDelete(params.id);
-
-                return {
-                  success: true,
-                  data: user,
-                  message: `User ${
-                    (user as { is_deleted: boolean }).is_deleted
-                      ? "deleted"
-                      : "restored"
-                  } successfully`,
-                };
-              } catch (error) {
-                if (
-                  error instanceof Error &&
-                  error.message === "User not found"
-                ) {
-                  set.status = 404;
-                  return {
-                    success: false,
-                    message: "User not found",
-                  };
-                }
-
-                console.error("Toggle delete error:", error);
-                set.status = 500;
+          guardApp.delete("/:id", async ({ headers, params, set }) => {
+            try {
+              const auth = verifyAuth(headers);
+              if (!auth.valid) {
+                set.status = 403;
                 return {
                   success: false,
-                  message: "Something went wrong",
+                  message: auth.error,
                 };
               }
+
+              // Check if user is admin
+              if (!hasPermission(auth.user!.type, [UserType.admin])) {
+                set.status = 403;
+                return {
+                  success: false,
+                  message: "Insufficient permissions",
+                };
+              }
+
+              // Prevent users from deleting themselves
+              if (auth.user!.userId === params.id) {
+                set.status = 403;
+                return {
+                  success: false,
+                  message: "Cannot delete your own account",
+                };
+              }
+
+              const user = await userController.toggleUserDelete(params.id);
+
+              return {
+                success: true,
+                data: user,
+                message: `User ${
+                  (user as { is_deleted: boolean }).is_deleted
+                    ? "deleted"
+                    : "restored"
+                } successfully`,
+              };
+            } catch (error) {
+              if (
+                error instanceof Error &&
+                error.message === "User not found"
+              ) {
+                set.status = 404;
+                return {
+                  success: false,
+                  message: "User not found",
+                };
+              }
+
+              console.error("Toggle delete error:", error);
+              set.status = 500;
+              return {
+                success: false,
+                message: "Something went wrong",
+              };
             }
-          )
+          })
       )
   );
 }
