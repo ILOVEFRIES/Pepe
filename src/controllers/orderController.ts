@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { removeColumnPrefix } from "../util/removeColumnPrefix";
 import { ulid } from "ulid";
+import parseOrderItem from "../util/parseOrderItem";
 
 const db = new PrismaClient();
 
@@ -34,7 +35,7 @@ export const orderController = {
         },
       });
 
-      return result.map((order) => removeColumnPrefix(order));
+      return result.map((order) => removeColumnPrefix(parseOrderItem(order)));
     } catch (error) {
       console.error("getOrders error:", error);
       throw error;
@@ -75,7 +76,7 @@ export const orderController = {
         },
       });
 
-      return result ? removeColumnPrefix(result) : null;
+      return result ? removeColumnPrefix(parseOrderItem(result)) : null;
     } catch (error) {
       console.error("getOrderById error:", error);
       throw error;
@@ -106,7 +107,7 @@ export const orderController = {
         },
       });
 
-      return result.map((order) => removeColumnPrefix(order));
+      return result.map((order) => removeColumnPrefix(parseOrderItem(order)));
     } catch (error) {
       console.error("getOrdersByOutletId error:", error);
       throw error;
@@ -122,7 +123,7 @@ export const orderController = {
     or_sc: number;
     or_subtotal: number;
     or_grand_total: number;
-    or_order_item: string; // JSON string
+    or_order_item: string;
   }) => {
     try {
       const created = await db.order.create({
@@ -135,7 +136,7 @@ export const orderController = {
           or_sc: data.or_sc,
           or_subtotal: data.or_subtotal,
           or_grand_total: data.or_grand_total,
-          or_order_item: data.or_order_item,
+          or_order_item: JSON.stringify(data.or_order_item),
         },
         select: {
           or_id: true,
