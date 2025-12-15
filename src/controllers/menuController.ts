@@ -20,6 +20,9 @@ export const menuController = {
           m_picture_url: true,
           m_picture_path: true,
           m_category: true,
+          m_is_subitem: true,
+          m_created_at: true,
+          m_updated_at: true,
         },
       });
 
@@ -46,6 +49,9 @@ export const menuController = {
           m_picture_url: true,
           m_picture_path: true,
           m_category: true,
+          m_is_subitem: true,
+          m_created_at: true,
+          m_updated_at: true,
         },
       });
 
@@ -106,6 +112,7 @@ export const menuController = {
       m_picture_url: string;
       m_picture_path: string;
       m_category: string;
+      m_is_subitem: boolean;
     }>
   ) => {
     try {
@@ -124,6 +131,9 @@ export const menuController = {
           ...(data.m_category !== undefined && {
             m_category: data.m_category,
           }),
+          ...(data.m_is_subitem !== undefined && {
+            m_is_subitem: data.m_is_subitem,
+          }),
         },
         select: {
           m_id: true,
@@ -133,6 +143,9 @@ export const menuController = {
           m_picture_url: true,
           m_picture_path: true,
           m_category: true,
+          m_is_subitem: true,
+          m_created_at: true,
+          m_updated_at: true,
           m_is_deleted: true,
         },
       });
