@@ -59,8 +59,8 @@ export function menuSubitemRoutes(app: any) {
         .guard(
           {
             body: t.Object({
-              parentId: t.Numeric(),
-              subitemIds: t.Array(t.Numeric(), {
+              parent_id: t.Numeric(),
+              subitem_ids: t.Array(t.Numeric(), {
                 minItems: 1,
               }),
             }),
