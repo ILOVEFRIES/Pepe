@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { t } from "elysia";
 import { menuController } from "../controllers/menuController";
 import { UserType, Prisma } from "@prisma/client";
 import { rateLimit } from "elysia-rate-limit";
@@ -10,7 +10,7 @@ import {
 } from "../controllers/menuImage.controller";
 
 // MENU ROUTES
-export function menuRoutes(app: Elysia) {
+export function menuRoutes(app: any) {
   return app
     .use(
       rateLimit({
@@ -21,11 +21,11 @@ export function menuRoutes(app: Elysia) {
 
     .use(firebaseMiddleware)
 
-    .guard({}, (guardApp) =>
+    .guard({}, (guardApp: any) =>
       guardApp
 
         // GET ALL MENUS
-        .get("/", async ({ headers, set }) => {
+        .get("/", async ({ headers, set }: any) => {
           const auth = verifyAuth(headers);
 
           if (!auth.valid) {
@@ -53,8 +53,8 @@ export function menuRoutes(app: Elysia) {
           {
             params: t.Object({ id: t.Numeric() }),
           },
-          (idGuard) =>
-            idGuard.get("/:id", async ({ headers, params, set }) => {
+          (idGuard: any) =>
+            idGuard.get("/:id", async ({ headers, params, set }: any) => {
               const auth = verifyAuth(headers);
 
               if (!auth.valid) {
@@ -105,8 +105,8 @@ export function menuRoutes(app: Elysia) {
               ),
             }),
           },
-          (bodyGuard) =>
-            bodyGuard.post("/", async ({ headers, body, set }) => {
+          (bodyGuard: any) =>
+            bodyGuard.post("/", async ({ headers, body, set }: any) => {
               const auth = verifyAuth(headers);
 
               if (!auth.valid) {
@@ -195,74 +195,77 @@ export function menuRoutes(app: Elysia) {
               ),
             }),
           },
-          (updateGuard) =>
-            updateGuard.put("/:id", async ({ headers, params, body, set }) => {
-              const auth = verifyAuth(headers);
+          (updateGuard: any) =>
+            updateGuard.put(
+              "/:id",
+              async ({ headers, params, body, set }: any) => {
+                const auth = verifyAuth(headers);
 
-              if (!auth.valid) {
-                set.status = 403;
-                return { success: false, message: auth.error };
-              }
-
-              if (!hasPermission(auth.user!.type, [UserType.admin])) {
-                set.status = 403;
-                return {
-                  success: false,
-                  message: "Insufficient permissions",
-                };
-              }
-
-              try {
-                // Fetch existing menu (for old image)
-                const menu = await menuController.getMenuById(params.id);
-
-                if (!menu) {
-                  set.status = 404;
-                  return { success: false, message: "Menu not found" };
+                if (!auth.valid) {
+                  set.status = 403;
+                  return { success: false, message: auth.error };
                 }
 
-                let pictureUrl = menu.picture_url;
-                let picturePath = menu.picture_path;
-
-                // If new image uploaded → replace
-                if (body.image) {
-                  // delete old image first
-                  await deleteMenuImage(picturePath);
-
-                  // upload new image
-                  const uploaded = await uploadMenuImage(
-                    Buffer.from(await body.image.arrayBuffer()),
-                    body.sku ?? menu.sku,
-                    body.image.type
-                  );
-
-                  pictureUrl = uploaded.url;
-                  picturePath = uploaded.path;
+                if (!hasPermission(auth.user!.type, [UserType.admin])) {
+                  set.status = 403;
+                  return {
+                    success: false,
+                    message: "Insufficient permissions",
+                  };
                 }
 
-                // Update DB
-                const updated = await menuController.updateMenu(params.id, {
-                  ...(body.sku !== undefined && { m_sku: body.sku }),
-                  ...(body.name !== undefined && { m_name: body.name }),
-                  ...(body.desc !== undefined && { m_desc: body.desc }),
-                  ...(body.category !== undefined && {
-                    m_category: body.category,
-                  }),
-                  m_picture_url: pictureUrl,
-                  m_picture_path: picturePath,
-                });
+                try {
+                  // Fetch existing menu (for old image)
+                  const menu = await menuController.getMenuById(params.id);
 
-                return {
-                  success: true,
-                  message: "Menu updated successfully",
-                  data: updated,
-                };
-              } catch (error) {
-                console.error("Update menu error:", error);
-                set.status = 500;
-                return { success: false, message: "Something went wrong" };
+                  if (!menu) {
+                    set.status = 404;
+                    return { success: false, message: "Menu not found" };
+                  }
+
+                  let pictureUrl = menu.picture_url;
+                  let picturePath = menu.picture_path;
+
+                  if (body.image) {
+                    if (picturePath) {
+                      await deleteMenuImage(picturePath);
+                    }
+
+                    // upload new image
+                    const uploaded = await uploadMenuImage(
+                      Buffer.from(await body.image.arrayBuffer()),
+                      body.sku ?? menu.sku,
+                      body.image.type
+                    );
+
+                    pictureUrl = uploaded.url;
+                    picturePath = uploaded.path;
+                  }
+
+                  // Update DB
+                  const updated = await menuController.updateMenu(params.id, {
+                    ...(body.sku !== undefined && { m_sku: body.sku }),
+                    ...(body.name !== undefined && { m_name: body.name }),
+                    ...(body.desc !== undefined && { m_desc: body.desc }),
+                    ...(body.category !== undefined && {
+                      m_category: body.category,
+                    }),
+                    m_picture_url: pictureUrl,
+                    m_picture_path: picturePath,
+                  });
+
+                  return {
+                    success: true,
+                    message: "Menu updated successfully",
+                    data: updated,
+                  };
+                } catch (error) {
+                  console.error("Update menu error:", error);
+                  set.status = 500;
+                  return { success: false, message: "Something went wrong" };
+                }
               }
-            })
+            )
         )
 
         // TOGGLE MENU DELETE STATUS
@@ -270,52 +273,55 @@ export function menuRoutes(app: Elysia) {
           {
             params: t.Object({ id: t.Numeric() }),
           },
-          (toggleGuard) =>
-            toggleGuard.delete("/:id", async ({ headers, params, set }) => {
-              const auth = verifyAuth(headers);
+          (toggleGuard: any) =>
+            toggleGuard.delete(
+              "/:id",
+              async ({ headers, params, set }: any) => {
+                const auth = verifyAuth(headers);
 
-              if (!auth.valid) {
-                set.status = 403;
-                return { success: false, message: auth.error };
-              }
-
-              if (!hasPermission(auth.user!.type, [UserType.admin])) {
-                set.status = 403;
-                return {
-                  success: false,
-                  message: "Insufficient permissions",
-                };
-              }
-
-              try {
-                // Get current menu
-                const menu = await menuController.getMenuById(params.id);
-                if (!menu) {
-                  set.status = 404;
-                  return { success: false, message: "Menu not found" };
+                if (!auth.valid) {
+                  set.status = 403;
+                  return { success: false, message: auth.error };
                 }
 
-                // If deleting → delete image
-                if (!menu.is_deleted && menu.picture_path) {
-                  await deleteMenuImage(menu.picture_path);
+                if (!hasPermission(auth.user!.type, [UserType.admin])) {
+                  set.status = 403;
+                  return {
+                    success: false,
+                    message: "Insufficient permissions",
+                  };
                 }
 
-                // Toggle delete flag
-                const updated = await menuController.toggleMenuDelete(
-                  params.id
-                );
+                try {
+                  // Get current menu
+                  const menu = await menuController.getMenuById(params.id);
+                  if (!menu) {
+                    set.status = 404;
+                    return { success: false, message: "Menu not found" };
+                  }
 
-                return {
-                  success: true,
-                  message: "Menu delete status updated",
-                  data: updated,
-                };
-              } catch (error) {
-                console.error("Toggle menu delete error:", error);
-                set.status = 500;
-                return { success: false, message: "Something went wrong" };
+                  // If deleting → delete image
+                  if (!menu.is_deleted && menu.picture_path) {
+                    await deleteMenuImage(menu.picture_path);
+                  }
+
+                  // Toggle delete flag
+                  const updated = await menuController.toggleMenuDelete(
+                    params.id
+                  );
+
+                  return {
+                    success: true,
+                    message: "Menu delete status updated",
+                    data: updated,
+                  };
+                } catch (error) {
+                  console.error("Toggle menu delete error:", error);
+                  set.status = 500;
+                  return { success: false, message: "Something went wrong" };
+                }
               }
-            })
+            )
         )
     );
 }

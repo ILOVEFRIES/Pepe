@@ -1,11 +1,11 @@
-import { Elysia, t } from "elysia";
+import { t } from "elysia";
 import { userController } from "../controllers/userController";
 import { UserType } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { rateLimit } from "elysia-rate-limit";
 import { verifyAuth, hasPermission } from "../middleware/auth";
 
-export function userRoutes(app: Elysia) {
+export function userRoutes(app: any) {
   return (
     app
 
@@ -25,8 +25,8 @@ export function userRoutes(app: Elysia) {
             password: t.String(),
           }),
         },
-        (guardApp) =>
-          guardApp.post("/login", async ({ body, set }) => {
+        (guardApp: any) =>
+          guardApp.post("/login", async ({ body, set }: any) => {
             try {
               const user = await userController.getUserByEmailWithPassword(
                 body.email
@@ -94,8 +94,8 @@ export function userRoutes(app: Elysia) {
             type: t.Enum(UserType),
           }),
         },
-        (guardApp) =>
-          guardApp.post("/", async ({ body, set }) => {
+        (guardApp: any) =>
+          guardApp.post("/", async ({ body, set }: any) => {
             try {
               //   // Check if user is admin
               //   if (!hasPermission(auth.user!.type, [UserType.admin])) {
@@ -164,10 +164,10 @@ export function userRoutes(app: Elysia) {
             confirm_password: t.String({ minLength: 1 }),
           }),
         },
-        (guardApp) =>
+        (guardApp: any) =>
           guardApp.put(
             "/:id/change-password",
-            async ({ headers, params, body, set }) => {
+            async ({ headers, params, body, set }: any) => {
               try {
                 const auth = verifyAuth(headers);
                 if (!auth.valid) {
@@ -265,8 +265,8 @@ export function userRoutes(app: Elysia) {
             is_deleted: t.Optional(t.Boolean()),
           }),
         },
-        (guardApp) =>
-          guardApp.put("/:id", async ({ headers, params, body, set }) => {
+        (guardApp: any) =>
+          guardApp.put("/:id", async ({ headers, params, body, set }: any) => {
             try {
               const auth = verifyAuth(headers);
               if (!auth.valid) {
@@ -351,8 +351,8 @@ export function userRoutes(app: Elysia) {
             id: t.Numeric(),
           }),
         },
-        (guardApp) =>
-          guardApp.delete("/:id", async ({ headers, params, set }) => {
+        (guardApp: any) =>
+          guardApp.delete("/:id", async ({ headers, params, set }: any) => {
             try {
               const auth = verifyAuth(headers);
               if (!auth.valid) {

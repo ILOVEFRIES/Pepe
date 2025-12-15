@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { t } from "elysia";
 import { outletController } from "../controllers/outletController";
 import { UserType } from "@prisma/client";
 import { rateLimit } from "elysia-rate-limit";
@@ -6,7 +6,7 @@ import { verifyAuth, hasPermission } from "../middleware/auth";
 import { Prisma } from "@prisma/client";
 
 // OUTLET ROUTES
-export function outletRoutes(app: Elysia) {
+export function outletRoutes(app: any) {
   return (
     app
       .use(
@@ -17,8 +17,8 @@ export function outletRoutes(app: Elysia) {
       )
 
       // GET ALL OUTLETS (Admin only)
-      .guard({}, (guardApp) =>
-        guardApp.get("/", async ({ headers, set }) => {
+      .guard({}, (guardApp: any) =>
+        guardApp.get("/", async ({ headers, set }: any) => {
           const auth = verifyAuth(headers);
 
           if (!auth.valid) {
@@ -49,8 +49,8 @@ export function outletRoutes(app: Elysia) {
             id: t.Numeric(),
           }),
         },
-        (guardApp) =>
-          guardApp.get("/:id", async ({ headers, params, set }) => {
+        (guardApp: any) =>
+          guardApp.get("/:id", async ({ headers, params, set }: any) => {
             const auth = verifyAuth(headers);
 
             if (!auth.valid) {
@@ -90,8 +90,8 @@ export function outletRoutes(app: Elysia) {
             sc: t.Numeric(),
           }),
         },
-        (guardApp) =>
-          guardApp.post("/", async ({ headers, body, set }) => {
+        (guardApp: any) =>
+          guardApp.post("/", async ({ headers, body, set }: any) => {
             const auth = verifyAuth(headers);
 
             if (!auth.valid) {
@@ -151,8 +151,8 @@ export function outletRoutes(app: Elysia) {
             is_deleted: t.Optional(t.Boolean()),
           }),
         },
-        (guardApp) =>
-          guardApp.put("/:id", async ({ headers, params, body, set }) => {
+        (guardApp: any) =>
+          guardApp.put("/:id", async ({ headers, params, body, set }: any) => {
             const auth = verifyAuth(headers);
 
             if (!auth.valid) {
@@ -198,8 +198,8 @@ export function outletRoutes(app: Elysia) {
         {
           params: t.Object({ id: t.Numeric() }),
         },
-        (guardApp) =>
-          guardApp.delete("/:id", async ({ headers, params, set }) => {
+        (guardApp: any) =>
+          guardApp.delete("/:id", async ({ headers, params, set }: any) => {
             const auth = verifyAuth(headers);
 
             if (!auth.valid) {

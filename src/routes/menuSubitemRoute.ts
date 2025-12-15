@@ -1,11 +1,11 @@
-import { Elysia, t } from "elysia";
+import { t } from "elysia";
 import { UserType } from "@prisma/client";
 import { rateLimit } from "elysia-rate-limit";
 import { verifyAuth, hasPermission } from "../middleware/auth";
 import { menuSubitemController } from "../controllers/menuSubitemController";
 
 // MENU SUBITEM ROUTES
-export function menuSubitemRoutes(app: Elysia) {
+export function menuSubitemRoutes(app: any) {
   return app
     .use(
       rateLimit({
@@ -13,15 +13,15 @@ export function menuSubitemRoutes(app: Elysia) {
         max: 100,
       })
     )
-    .guard({}, (guardApp) =>
+    .guard({}, (guardApp: any) =>
       guardApp
         // GET ALL SUBITEMS FOR A PARENT MENU
         .guard(
           {
             params: t.Object({ parentId: t.Numeric() }),
           },
-          (idGuard) =>
-            idGuard.get("/:parentId", async ({ headers, params, set }) => {
+          (idGuard: any) =>
+            idGuard.get("/:parentId", async ({ headers, params, set }: any) => {
               const auth = verifyAuth(headers);
 
               if (!auth.valid) {
@@ -65,8 +65,8 @@ export function menuSubitemRoutes(app: Elysia) {
               }),
             }),
           },
-          (bodyGuard) =>
-            bodyGuard.post("/", async ({ headers, body, set }) => {
+          (bodyGuard: any) =>
+            bodyGuard.post("/", async ({ headers, body, set }: any) => {
               const auth = verifyAuth(headers);
 
               if (!auth.valid) {
@@ -122,8 +122,8 @@ export function menuSubitemRoutes(app: Elysia) {
           {
             params: t.Object({ id: t.Numeric() }),
           },
-          (idGuard) =>
-            idGuard.delete("/:id", async ({ headers, params, set }) => {
+          (idGuard: any) =>
+            idGuard.delete("/:id", async ({ headers, params, set }: any) => {
               const auth = verifyAuth(headers);
 
               if (!auth.valid) {
