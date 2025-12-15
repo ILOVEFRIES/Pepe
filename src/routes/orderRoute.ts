@@ -83,7 +83,63 @@ export function orderRoutes(app: any) {
           })
       )
 
-      // GET ORDERS BY OUTLET ID (Admin only)
+      // GET ORDER BY UID
+      .guard(
+        {
+          params: t.Object({
+            uid: t.String(),
+          }),
+        },
+        (guardApp: any) =>
+          guardApp.get("/track/:uid", async ({ headers, params, set }: any) => {
+            const auth = verifyAuth(headers);
+
+            if (!auth.valid) {
+              set.status = 403;
+              return { success: false, message: auth.error };
+            }
+
+            // Admin & customer can track orders
+            if (
+              !hasPermission(auth.user!.type, [
+                UserType.admin,
+                UserType.customer,
+              ])
+            ) {
+              set.status = 403;
+              return {
+                success: false,
+                message: "Insufficient permissions",
+              };
+            }
+
+            try {
+              const order = await orderController.getOrderByUid(params.uid);
+
+              if (!order) {
+                set.status = 404;
+                return {
+                  success: false,
+                  message: "Order not found",
+                };
+              }
+
+              return {
+                success: true,
+                data: order,
+              };
+            } catch (error) {
+              console.error("Track order error:", error);
+              set.status = 500;
+              return {
+                success: false,
+                message: "Internal server error",
+              };
+            }
+          })
+      )
+
+      // CREATE ORDER
       .guard(
         {
           body: t.Object({

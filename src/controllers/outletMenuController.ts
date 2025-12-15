@@ -86,7 +86,7 @@ export const outletMenuController = {
     }
   },
 
-  // GET OUTLET MENU BY ID
+  // GET OUTLET MENU BY OUTLET ID
   getOutletMenusByOutletId: async (outletId: number) => {
     try {
       const result = await db.outlet_menu.findMany({
@@ -154,6 +154,132 @@ export const outletMenuController = {
       });
     } catch (error) {
       console.error("getOutletMenusByOutletId error:", error);
+      throw error;
+    }
+  },
+
+  // GET OUTLET MENU BY PARENT MENU ID
+  getOutletMenuByParentIdAndOutletId: async (
+    parentMenuId: number,
+    outletId: number
+  ) => {
+    try {
+      const outletMenus = await db.outlet_menu.findMany({
+        where: {
+          om_m_id: parentMenuId,
+          om_o_id: outletId,
+          om_is_deleted: false,
+        },
+        select: {
+          om_id: true,
+          om_m_id: true,
+          om_o_id: true,
+          om_price: true,
+          om_stock: true,
+          om_is_selling: true,
+          om_created_at: true,
+          om_updated_at: true,
+
+          menu: {
+            select: {
+              m_id: true,
+              m_sku: true,
+              m_name: true,
+              m_desc: true,
+              m_category: true,
+              m_picture_url: true,
+              m_picture_path: true,
+
+              menu_subitem_childs: {
+                select: {
+                  subitem: {
+                    select: {
+                      m_id: true,
+                      m_sku: true,
+                      m_name: true,
+                      m_desc: true,
+                      m_category: true,
+                      m_picture_url: true,
+                      m_picture_path: true,
+                      m_is_deleted: true, // we will filter this
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      return outletMenus.map((item) => removeColumnPrefix(item));
+    } catch (error) {
+      console.error("getOutletMenuByParentIdAndOutletId error:", error);
+      throw error;
+    }
+  },
+
+  // SEARCH OUTLET MENUS
+  searchOutletMenus: async (params: {
+    outlet_id: number;
+    keyword?: string;
+    category?: string;
+    is_selling?: boolean;
+  }) => {
+    try {
+      const result = await db.outlet_menu.findMany({
+        where: {
+          om_o_id: params.outlet_id,
+          om_is_deleted: false,
+
+          ...(params.is_selling !== undefined && {
+            om_is_selling: params.is_selling,
+          }),
+
+          menu: {
+            is: {
+              m_is_deleted: false,
+              m_is_subitem: false,
+              ...(params.keyword && {
+                OR: [{ m_name: { contains: params.keyword.toLowerCase() } }],
+              }),
+            },
+          },
+        },
+
+        select: {
+          om_id: true,
+          om_m_id: true,
+          om_o_id: true,
+          om_price: true,
+          om_stock: true,
+          om_is_selling: true,
+          om_created_at: true,
+          om_updated_at: true,
+
+          menu: {
+            select: {
+              m_id: true,
+              m_sku: true,
+              m_name: true,
+              m_desc: true,
+              m_category: true,
+              m_picture_url: true,
+              m_picture_path: true,
+            },
+          },
+        },
+      });
+
+      // CLEAN & FLATTEN
+      return result.map((item) => {
+        const cleaned = removeColumnPrefix(item);
+
+        return {
+          ...cleaned,
+          menu: removeColumnPrefix(item.menu),
+        };
+      });
+    } catch (error) {
+      console.error("searchOutletMenus error:", error);
       throw error;
     }
   },

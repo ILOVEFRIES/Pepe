@@ -132,6 +132,117 @@ export function outletMenuRoutes(app: any) {
           )
       )
 
+      // GET OUTLET MENU BY PARENT MENU ID & OUTLET ID
+      .guard(
+        {
+          query: t.Object({
+            parent_id: t.Numeric(),
+            outlet_id: t.Numeric(),
+          }),
+        },
+        (guardApp: any) =>
+          guardApp.get("/by-parent", async ({ headers, query, set }: any) => {
+            // Authentication
+            const auth = verifyAuth(headers);
+            if (!auth.valid) {
+              set.status = 403;
+              return { success: false, message: auth.error };
+            }
+
+            // Permission check
+            if (
+              !hasPermission(auth.user!.type, [
+                UserType.admin,
+                UserType.customer,
+              ])
+            ) {
+              set.status = 403;
+              return { success: false, message: "Insufficient permissions" };
+            }
+
+            try {
+              // Call controller
+              const result =
+                await outletMenuController.getOutletMenuByParentIdAndOutletId(
+                  query.parent_id,
+                  query.outlet_id
+                );
+
+              if (!result || result.length === 0) {
+                set.status = 404;
+                return { success: false, message: "Menu not found" };
+              }
+
+              return {
+                success: true,
+                message: "Menu fetched successfully",
+                data: result,
+              };
+            } catch (error: any) {
+              console.error(
+                "Get menu by parent ID and outlet ID error:",
+                error
+              );
+              set.status = 500;
+              return { success: false, message: "Internal server error" };
+            }
+          })
+      )
+
+      // SEARCH OUTLET MENUS
+      .guard(
+        {
+          query: t.Object({
+            outlet_id: t.Numeric(),
+            keyword: t.Optional(t.String()),
+            category: t.Optional(t.String()),
+            is_selling: t.Optional(t.Boolean()),
+          }),
+        },
+        (guardApp: any) =>
+          guardApp.get("/search", async ({ query, headers, set }: any) => {
+            const auth = verifyAuth(headers);
+
+            if (!auth.valid) {
+              set.status = 403;
+              return { success: false, message: auth.error };
+            }
+
+            if (
+              !hasPermission(auth.user!.type, [
+                UserType.admin,
+                UserType.customer,
+              ])
+            ) {
+              set.status = 403;
+              return {
+                success: false,
+                message: "Insufficient permissions",
+              };
+            }
+
+            try {
+              const data = await outletMenuController.searchOutletMenus({
+                outlet_id: query.outlet_id,
+                keyword: query.keyword,
+                category: query.category,
+                is_selling: query.is_selling,
+              });
+
+              return {
+                success: true,
+                data,
+              };
+            } catch (error: any) {
+              set.status = 400;
+              return {
+                success: false,
+                message: error.message ?? "Search outlet menu failed",
+              };
+            }
+          })
+      )
+
       // CREATE OUTLET MENU (Admin only)
       .guard(
         {
