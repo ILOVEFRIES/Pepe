@@ -19,6 +19,4 @@ const app = new Elysia()
   .group("/menu-subitems", menuSubitemRoutes)
   .listen(process.env.PORT || 9000);
 
-console.log(
-  `Project-Name running at ${app.server?.hostname}:${app.server?.port}`
-);
+console.log(`Pepe running at ${app.server?.hostname}:${app.server?.port}`);
