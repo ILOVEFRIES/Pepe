@@ -5,8 +5,6 @@ const excludeFields = [
   "is_revoked",
 ] as const;
 
-type Primitive = string | number | boolean | null | undefined | Date;
-
 /**
  * Removes column prefixes (e.g. o_id → id) recursively
  * while preserving object shape.
