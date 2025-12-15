@@ -56,19 +56,21 @@ model outlet {
 // MENU
 // ==========================================================
 model menu {
-  m_id                 Int             @id @default(autoincrement())
-  m_sku                String          @unique
-  m_name               String
-  m_desc               String
+  m_id          Int      @id @default(autoincrement())
+  m_sku         String   @unique
+  m_name        String
+  m_desc        String
 
-  // Firebase image URL
-  m_picture_url        String?
-  m_category           String
-  m_is_deleted         Boolean         @default(false)
+  m_picture_url  String?
+  m_picture_path String?
+
+  m_category    String
+  m_is_deleted  Boolean  @default(false)
 
   // RELATIONS
-  menu_subitem_childs   menu_subitem[]  @relation("ParentToChild")
-  menu_subitem_parents  menu_subitem[]  @relation("ChildToParent")
+  menu_subitem_childs   menu_subitem[] @relation("ParentToChild")
+  menu_subitem_parents  menu_subitem[] @relation("ChildToParent")
+
   outlet_menu           outlet_menu[]
 }
 
