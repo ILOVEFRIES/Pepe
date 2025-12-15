@@ -65,6 +65,7 @@ model menu {
   m_picture_path String?
 
   m_category    String
+  m_is_subitem  Boolean  @default(false)
   m_is_deleted  Boolean  @default(false)
 
   // RELATIONS
