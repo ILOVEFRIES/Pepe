@@ -1,4 +1,6 @@
 const excludeFields = [
+  "menu_subitems",
+  "menu",
   "item_total_price",
   "with_charges",
   "without_charges",

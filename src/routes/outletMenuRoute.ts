@@ -85,7 +85,7 @@ export function outletMenuRoutes(app: any) {
           })
       )
 
-      // GET OUTLET MENUS BY OUTLET ID (Admin only)
+      // GET OUTLET MENUS BY OUTLET ID
       .guard(
         {
           params: t.Object({
@@ -103,7 +103,12 @@ export function outletMenuRoutes(app: any) {
                 return { success: false, message: auth.error };
               }
 
-              if (!hasPermission(auth.user!.type, [UserType.admin])) {
+              if (
+                !hasPermission(auth.user!.type, [
+                  UserType.admin,
+                  UserType.customer,
+                ])
+              ) {
                 set.status = 403;
                 return {
                   success: false,
