@@ -20,6 +20,35 @@ export const outletMenuController = {
           om_is_selling: true,
           om_created_at: true,
           om_updated_at: true,
+
+          menu: {
+            select: {
+              m_id: true,
+              m_sku: true,
+              m_name: true,
+              m_desc: true,
+              m_category: true,
+              m_picture_url: true,
+              m_picture_path: true,
+
+              menu_subitem_childs: {
+                select: {
+                  subitem: {
+                    select: {
+                      m_id: true,
+                      m_sku: true,
+                      m_name: true,
+                      m_desc: true,
+                      m_category: true,
+                      m_picture_url: true,
+                      m_picture_path: true,
+                      m_is_deleted: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
