@@ -61,12 +61,8 @@ model menu {
   m_name               String
   m_desc               String
 
-  // Image fields
-  m_picture_path       String?         // ex: "uploads/menu/12345-burger.png"
-  m_picture_mime       String?         // ex: "image/png"
-  m_picture_size       Int?            // size in bytes
-  m_picture_original   String?         // original uploaded filename
-
+  // Firebase image URL
+  m_picture_url        String?
   m_category           String
   m_is_deleted         Boolean         @default(false)
 
