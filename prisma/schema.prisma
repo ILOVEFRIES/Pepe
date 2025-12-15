@@ -97,7 +97,7 @@ model outlet_menu {
   om_m_id       Int
   om_o_id       Int
   om_price      Float
-  om_stock      Float
+  om_stock      Float?
   om_created_at DateTime  @default(now())
   om_updated_at DateTime  @updatedAt
   om_is_selling Boolean   @default(true)
