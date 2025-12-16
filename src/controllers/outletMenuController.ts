@@ -93,8 +93,14 @@ export const outletMenuController = {
         where: {
           om_o_id: outletId,
           om_is_deleted: false,
+          om_is_selling: true,
           menu: {
             m_is_deleted: false,
+          },
+        },
+        orderBy: {
+          menu: {
+            m_name: "asc",
           },
         },
         select: {
@@ -139,7 +145,7 @@ export const outletMenuController = {
       });
 
       // CLEAN & FLATTEN RESPONSE
-      return result.map((item) => {
+      const cleanedMenus = result.map((item) => {
         const cleaned = removeColumnPrefix(item);
 
         return {
@@ -152,6 +158,32 @@ export const outletMenuController = {
           },
         };
       });
+
+      type GroupedMenus = {
+        category: string;
+        menus: typeof cleanedMenus;
+      };
+
+      const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
+
+      const groupedMap = cleanedMenus.reduce<
+        Record<string, typeof cleanedMenus>
+      >((acc, item) => {
+        const category = normalizeCategory(item.menu.category);
+        (acc[category] ??= []).push(item);
+        return acc;
+      }, {});
+
+      const groupedArray: GroupedMenus[] = Object.entries(groupedMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([category, menus]) => ({
+          category,
+          menus: menus.sort((a, b) =>
+            a.menu.m_name.localeCompare(b.menu.m_name)
+          ),
+        }));
+
+      return groupedArray;
     } catch (error) {
       console.error("getOutletMenusByOutletId error:", error);
       throw error;
@@ -201,7 +233,7 @@ export const outletMenuController = {
                       m_category: true,
                       m_picture_url: true,
                       m_picture_path: true,
-                      m_is_deleted: true, // we will filter this
+                      m_is_deleted: true,
                     },
                   },
                 },
@@ -225,6 +257,10 @@ export const outletMenuController = {
     is_selling?: boolean;
   }) => {
     try {
+      const keyword = params.keyword?.trim().length
+        ? params.keyword.trim()
+        : undefined;
+
       const result = await db.outlet_menu.findMany({
         where: {
           om_o_id: params.outlet_id,
@@ -238,12 +274,23 @@ export const outletMenuController = {
             is: {
               m_is_deleted: false,
               m_is_subitem: false,
-              ...(params.keyword && {
-                OR: [{ m_name: { contains: params.keyword.toLowerCase() } }],
+
+              ...(params.category && {
+                m_category: params.category,
+              }),
+
+              ...(keyword && {
+                OR: [{ m_name: { contains: keyword } }],
               }),
             },
           },
         },
+
+        orderBy: [
+          { om_is_selling: "desc" }, // selling first
+          { om_stock: "desc" }, // in-stock first
+          { menu: { m_name: "asc" } },
+        ],
 
         select: {
           om_id: true,
@@ -270,14 +317,39 @@ export const outletMenuController = {
       });
 
       // CLEAN & FLATTEN
-      return result.map((item) => {
+      const cleanedMenus = result.map((item) => {
         const cleaned = removeColumnPrefix(item);
-
         return {
           ...cleaned,
           menu: removeColumnPrefix(item.menu),
         };
       });
+
+      type GroupedMenus = {
+        category: string;
+        menus: typeof cleanedMenus;
+      };
+
+      const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
+
+      const groupedMap = cleanedMenus.reduce<
+        Record<string, typeof cleanedMenus>
+      >((acc, item) => {
+        const category = normalizeCategory(item.menu.category);
+        (acc[category] ??= []).push(item);
+        return acc;
+      }, {});
+
+      const groupedArray: GroupedMenus[] = Object.entries(groupedMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([category, menus]) => ({
+          category,
+          menus: menus.sort((a, b) =>
+            a.menu.m_name.localeCompare(b.menu.m_name)
+          ),
+        }));
+
+      return groupedArray;
     } catch (error) {
       console.error("searchOutletMenus error:", error);
       throw error;
