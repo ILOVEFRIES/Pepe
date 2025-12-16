@@ -41,3 +41,13 @@ jobs:
       - name: Fail job if type check failed
         if: steps.typecheck.outcome == 'failure'
         run: exit 1
+
+      # ---------------- Prisma Steps ----------------
+      # - name: Install Prisma CLI
+      #   run: bun add -d prisma
+
+      # - name: Generate Prisma Client
+      #   run: bun prisma generate
+
+      # - name: Check Prisma Migrations
+      #   run: bun prisma migrate status --check
