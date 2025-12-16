@@ -325,5 +325,61 @@ export function menuRoutes(app: any) {
               }
             )
         )
+        .guard(
+          {
+            body: t.Object({
+              // Accept a single file upload for the default menu image
+              image: t.File({
+                type: ["image/png", "image/jpeg", "image/webp"],
+                maxSize: 5 * 1024 * 1024, // 5 MB
+              }),
+              sku: t.Optional(t.String()), // optional SKU, defaults to "default-menu"
+            }),
+          },
+          (guardApp: any) =>
+            guardApp.post(
+              "/upload-default-menu-image",
+              async ({ headers, body, set }: any) => {
+                const auth = verifyAuth(headers);
+
+                if (!auth.valid) {
+                  set.status = 403;
+                  return { success: false, message: auth.error };
+                }
+
+                if (!hasPermission(auth.user!.type, [UserType.admin])) {
+                  set.status = 403;
+                  return {
+                    success: false,
+                    message: "Insufficient permissions",
+                  };
+                }
+
+                if (!body.image) {
+                  set.status = 400;
+                  return { success: false, message: "No image provided" };
+                }
+
+                try {
+                  const buffer = Buffer.from(await body.image.arrayBuffer());
+                  const sku = body.sku ?? "default-menu";
+                  const mime = body.image.type;
+
+                  // Upload to Firebase
+                  const uploaded = await uploadMenuImage(buffer, sku, mime);
+
+                  return {
+                    success: true,
+                    message: "Default menu image uploaded successfully",
+                    data: uploaded,
+                  };
+                } catch (err) {
+                  console.error("Failed to upload default menu image:", err);
+                  set.status = 500;
+                  return { success: false, message: "Something went wrong" };
+                }
+              }
+            )
+        )
     );
 }
