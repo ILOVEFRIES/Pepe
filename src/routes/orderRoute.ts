@@ -150,7 +150,6 @@ export function orderRoutes(app: any) {
               t.Object({
                 menu_id: t.Numeric(),
                 quantity: t.Numeric(),
-
                 subitems: t.Optional(
                   t.Array(
                     t.Object({
@@ -195,41 +194,48 @@ export function orderRoutes(app: any) {
                 let subtotal = 0;
                 const detailedItems: any[] = [];
 
-                // PRICE + STOCK CHECK & DEDUCTION
+                // LOOP ORDER ITEMS
                 for (const item of body.order_item) {
-                  // MAIN ITEM
+                  // MAIN MENU ITEM
                   const outletMenu = await tx.outlet_menu.findFirst({
                     where: {
                       om_m_id: item.menu_id,
                       om_o_id: body.outlet_id,
                       om_is_deleted: false,
+                      om_is_selling: true,
                     },
                     select: {
                       om_id: true,
                       om_price: true,
                       om_stock: true,
+                      menu: {
+                        select: { m_name: true },
+                      },
                     },
                   });
 
                   if (!outletMenu) {
-                    throw new Error(`Menu ${item.menu_id} not available`);
+                    throw new Error("Menu not available");
                   }
 
-                  // MAIN ITEM STOCK
                   if (
                     outletMenu.om_stock !== null &&
                     outletMenu.om_stock < item.quantity
                   ) {
                     throw new Error(
-                      `Insufficient stock for menu ${item.menu_id}`
+                      `Insufficient stock for ${outletMenu.menu.m_name}`
                     );
                   }
 
+                  // DEDUCT MAIN STOCK
                   if (outletMenu.om_stock !== null) {
+                    const newStock = outletMenu.om_stock - item.quantity;
+
                     await tx.outlet_menu.update({
                       where: { om_id: outletMenu.om_id },
                       data: {
-                        om_stock: outletMenu.om_stock - item.quantity,
+                        om_stock: newStock,
+                        ...(newStock === 0 && { om_is_selling: false }),
                       },
                     });
                   }
@@ -245,33 +251,42 @@ export function orderRoutes(app: any) {
                           om_m_id: sub.menu_id,
                           om_o_id: body.outlet_id,
                           om_is_deleted: false,
+                          om_is_selling: true,
                         },
                         select: {
                           om_id: true,
                           om_price: true,
                           om_stock: true,
+                          menu: {
+                            select: { m_name: true },
+                          },
                         },
                       });
 
                       if (!subMenu) {
-                        throw new Error(`Subitem ${sub.menu_id} not available`);
+                        throw new Error("Subitem not available");
                       }
 
-                      // SUBITEM STOCK
                       if (
                         subMenu.om_stock !== null &&
                         subMenu.om_stock < sub.quantity
                       ) {
                         throw new Error(
-                          `Insufficient stock for subitem ${sub.menu_id}`
+                          `Insufficient stock for ${subMenu.menu.m_name}`
                         );
                       }
 
+                      // DEDUCT SUBITEM STOCK
                       if (subMenu.om_stock !== null) {
+                        const newSubStock = subMenu.om_stock - sub.quantity;
+
                         await tx.outlet_menu.update({
                           where: { om_id: subMenu.om_id },
                           data: {
-                            om_stock: subMenu.om_stock - sub.quantity,
+                            om_stock: newSubStock,
+                            ...(newSubStock === 0 && {
+                              om_is_selling: false,
+                            }),
                           },
                         });
                       }
@@ -299,12 +314,11 @@ export function orderRoutes(app: any) {
                   });
                 }
 
-                // SERVICE → TAX → GRAND TOTAL
+                // TOTALS
                 const serviceCharge = subtotal * outlet.o_sc;
                 const tax = (subtotal + serviceCharge) * outlet.o_tax;
                 const grandTotal = subtotal + serviceCharge + tax;
 
-                // BUILD ORDER ITEM JSON
                 const orderItemPayload = {
                   items: detailedItems,
                   summary: {
