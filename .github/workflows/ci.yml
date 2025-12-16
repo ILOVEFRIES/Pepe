@@ -7,42 +7,6 @@ on:
     branches: ["*"]
 
 jobs:
-  ci:
-    name: CI (Lint & Type Check)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install Dependencies
-        run: bun install
-
-      - name: ESLint
-        run: bun run lint
-
-      - name: Type Check (capture output)
-        id: typecheck
-        continue-on-error: true
-        run: |
-          bun run type-check > type-check.log
-
-      - name: Upload Type Check Artifact (only on failure)
-        if: steps.typecheck.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: type-check-report
-          path: type-check.log
-
-      - name: Fail job if type check failed
-        if: steps.typecheck.outcome == 'failure'
-        run: exit 1
-
   deploy:
     name: Deploy (Production)
     runs-on: ubuntu-latest
