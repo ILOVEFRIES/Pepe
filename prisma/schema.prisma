@@ -66,6 +66,8 @@ model menu {
 
   m_category    String
   m_is_subitem  Boolean  @default(false)
+  m_created_at  DateTime @default(now())
+  m_updated_at  DateTime @default(now()) @updatedAt
   m_is_deleted  Boolean  @default(false)
 
   // RELATIONS
