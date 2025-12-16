@@ -75,8 +75,7 @@ jobs:
           Host deploy-server
             HostName ${{ secrets.DEPLOY_SERVER_HOST }}
             User ${{ secrets.DEPLOY_USER }}
-            ProxyCommand cloudflared access ssh \
-              --hostname %h \
+            ProxyCommand cloudflared access ssh --hostname %h
             StrictHostKeyChecking no
           EOF
 
