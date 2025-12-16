@@ -85,5 +85,6 @@ jobs:
           ssh deploy-server << 'EOF'
             set -e
             cd app/Pepe/deploy
+            chmod +x ./deploy.sh
             ./deploy.sh
           EOF
