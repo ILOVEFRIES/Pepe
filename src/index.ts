@@ -21,6 +21,6 @@ const app = new Elysia()
   .group("/menu-subitems", menuSubitemRoutes)
   .group("/outlet-menus", outletMenuRoutes)
   .group("/orders", orderRoutes)
-  .listen(process.env.PORT || 9000);
+  .listen(process.env.PORT || 9008);
 
 console.log(`Pepe running at ${app.server?.hostname}:${app.server?.port}`);
