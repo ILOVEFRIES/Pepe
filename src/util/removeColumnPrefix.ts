@@ -16,26 +16,22 @@ export function removeColumnPrefix<T>(obj: T): any {
     return obj.map(removeColumnPrefix);
   }
 
-  if (typeof obj === "object" && obj !== null && !(obj instanceof Date)) {
-    const newObj: Record<string, unknown> = {};
+  if (obj && typeof obj === "object" && !(obj instanceof Date)) {
+    const newMap = new Map<string, unknown>();
 
-    for (const key in obj as Record<string, unknown>) {
-      if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-
+    for (const [key, value] of Object.entries(obj)) {
       const underscoreIndex = key.indexOf("_");
-
-      const newKey = excludeFields.includes(key as any)
+      const newKey = (excludeFields as readonly string[]).includes(key)
         ? key
         : underscoreIndex !== -1
         ? key.slice(underscoreIndex + 1)
         : key;
 
-      newObj[newKey] = removeColumnPrefix(
-        (obj as Record<string, unknown>)[key]
-      );
+      newMap.set(newKey, removeColumnPrefix(value));
     }
 
-    return newObj;
+    // Convert back to plain object if needed
+    return Object.fromEntries(newMap);
   }
 
   return obj;
