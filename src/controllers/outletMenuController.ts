@@ -166,15 +166,18 @@ export const outletMenuController = {
 
       const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
 
-      const groupedMap = cleanedMenus.reduce<
-        Record<string, typeof cleanedMenus>
-      >((acc, item) => {
-        const category = normalizeCategory(item.menu.category);
-        (acc[category] ??= []).push(item);
-        return acc;
-      }, {});
+      // Use Map instead of plain object to avoid object injection warnings
+      const groupedMap = new Map<string, typeof cleanedMenus>();
 
-      const groupedArray: GroupedMenus[] = Object.entries(groupedMap)
+      cleanedMenus.forEach((item) => {
+        const category = normalizeCategory(item.menu.category);
+        const arr = groupedMap.get(category) ?? [];
+        arr.push(item);
+        groupedMap.set(category, arr);
+      });
+
+      // Convert Map to array and sort
+      const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([category, menus]) => ({
           category,
@@ -332,15 +335,18 @@ export const outletMenuController = {
 
       const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
 
-      const groupedMap = cleanedMenus.reduce<
-        Record<string, typeof cleanedMenus>
-      >((acc, item) => {
-        const category = normalizeCategory(item.menu.category);
-        (acc[category] ??= []).push(item);
-        return acc;
-      }, {});
+      // Use Map instead of plain object to avoid object injection warnings
+      const groupedMap = new Map<string, typeof cleanedMenus>();
 
-      const groupedArray: GroupedMenus[] = Object.entries(groupedMap)
+      cleanedMenus.forEach((item) => {
+        const category = normalizeCategory(item.menu.category);
+        const arr = groupedMap.get(category) ?? [];
+        arr.push(item);
+        groupedMap.set(category, arr);
+      });
+
+      // Convert Map to array and sort
+      const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([category, menus]) => ({
           category,
