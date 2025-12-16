@@ -1,53 +1,47 @@
-name: CI
+name: Deploy (Production)
 
 on:
   push:
-    branches: ["*"]
-  pull_request:
-    branches: ["*"]
+    branches:
+      - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install Dependencies
-        run: bun install
-
-      - name: ESLint
-        run: bun run lint
-
-      - name: Type Check (capture output)
+      - name: Install SSH client
         run: |
-          bun run type-check > type-check.log
-        id: typecheck
-        continue-on-error: true
+          sudo apt-get update -y
+          sudo apt-get install -y openssh-client
 
-      - name: Upload Type Check Artifact (only on failure)
-        if: steps.typecheck.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: type-check-report
-          path: type-check.log
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
 
-      - name: Fail job if type check failed
-        if: steps.typecheck.outcome == 'failure'
-        run: exit 1
+          echo "${{ secrets.DEPLOY_SERVER_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-      # ---------------- Prisma Steps ----------------
-      # - name: Install Prisma CLI
-      #   run: bun add -d prisma
+          # Secure SSH config
+          cat <<EOF > ~/.ssh/config
+          Host deploy-server
+            HostName ${{ secrets.DEPLOY_SERVER_IP }}
+            User ${{ secrets.DEPLOY_USER }}
+            StrictHostKeyChecking yes
+          EOF
 
-      # - name: Generate Prisma Client
-      #   run: bun prisma generate
+      - name: Add server to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.DEPLOY_SERVER_IP }} >> ~/.ssh/known_hosts
 
-      # - name: Check Prisma Migrations
-      #   run: bun prisma migrate status --check
+      - name: Run deployment script on server
+        run: |
+          echo "🚀 Running deployment script..."
+          ssh deploy-server << 'EOF'
+            set -e
+            cd app/Pepe/deploy
+            ./deploy.sh
+          EOF
