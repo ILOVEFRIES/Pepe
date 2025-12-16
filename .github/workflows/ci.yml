@@ -39,7 +39,7 @@ jobs:
 
       - name: Run deployment script on server
         run: |
-          echo "🚀 Running deployment script..."
+          echo "Running deployment script..."
           ssh deploy-server << 'EOF'
             set -e
             cd app/Pepe/deploy
