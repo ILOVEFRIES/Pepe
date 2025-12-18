@@ -34,6 +34,7 @@ git fetch origin master
 git reset --hard origin/master
 
 # Build & migrate
+cd "$PROJECT_ROOT"
 bun install
 bunx prisma generate
 bunx prisma migrate deploy
