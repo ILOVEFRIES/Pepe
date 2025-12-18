@@ -131,6 +131,7 @@ export const outletMenuController = {
   // GET OUTLET MENU BY OUTLET ID
   getOutletMenusByOutletId: async (outletId: number) => {
     try {
+      // 1. Get parent outlet menus
       const result = await db.outlet_menu.findMany({
         where: {
           om_o_id: outletId,
@@ -183,14 +184,16 @@ export const outletMenuController = {
         },
       });
 
-      const subitemIds = Array.from(
-        new Set(
+      // 2. Collect unique subitem IDs
+      const subitemIds = [
+        ...new Set(
           result.flatMap((item) =>
-            item.menu.menu_subitem_childs.map((c) => c.subitem.m_id)
+            item.menu.menu_subitem_childs.map((child) => child.subitem.m_id)
           )
-        )
-      );
+        ),
+      ];
 
+      // 3. Fetch outlet_menu prices for subitems
       const subitemOutletMenus = await db.outlet_menu.findMany({
         where: {
           om_o_id: outletId,
@@ -205,7 +208,11 @@ export const outletMenuController = {
         },
       });
 
-      const subitemPriceMap = new Map(
+      // 4. Create price lookup map
+      const subitemPriceMap = new Map<
+        number,
+        { price: number; stock: number | null; is_selling: boolean }
+      >(
         subitemOutletMenus.map((s) => [
           s.om_m_id,
           {
@@ -216,6 +223,7 @@ export const outletMenuController = {
         ])
       );
 
+      // 5. Merge subitem prices into response
       return result.map((item) => ({
         id: item.om_id,
         price: item.om_price,
@@ -225,14 +233,16 @@ export const outletMenuController = {
         menu: {
           ...removeColumnPrefix(item.menu),
 
-          subitems: item.menu.menu_subitem_childs.map(({ subitem }) => ({
-            ...removeColumnPrefix(subitem),
-            ...(subitemPriceMap.get(subitem.m_id) ?? {
-              price: null,
-              stock: null,
-              is_selling: false,
-            }),
-          })),
+          subitems: item.menu.menu_subitem_childs.map(({ subitem }) => {
+            const outletData = subitemPriceMap.get(subitem.m_id);
+
+            return {
+              ...removeColumnPrefix(subitem),
+              price: outletData?.price ?? null,
+              stock: outletData?.stock ?? null,
+              is_selling: outletData?.is_selling ?? false,
+            };
+          }),
         },
       }));
     } catch (error) {
