@@ -337,8 +337,8 @@ export const outletMenuController = {
     try {
       const keyword = params.keyword?.trim() || undefined;
 
-      // 1️⃣ Fetch main menus (exclude subitems)
-      const result = await db.outlet_menu.findMany({
+      // Fetch main menus (exclude subitems)
+      const mainMenus = await db.outlet_menu.findMany({
         where: {
           om_o_id: params.outlet_id,
           om_is_deleted: false,
@@ -346,7 +346,7 @@ export const outletMenuController = {
           menu: {
             is: {
               m_is_deleted: false,
-              m_is_subitem: false, // EXCLUDE subitems here
+              m_is_subitem: false, // main menus only
               ...(params.category && { m_category: params.category }),
               ...(keyword && { OR: [{ m_name: { contains: keyword } }] }),
             },
@@ -377,6 +377,7 @@ export const outletMenuController = {
               m_picture_path: true,
               menu_subitem_childs: {
                 select: {
+                  ms_subitem_id: true,
                   subitem: {
                     select: {
                       m_id: true,
@@ -386,7 +387,6 @@ export const outletMenuController = {
                       m_category: true,
                       m_picture_url: true,
                       m_picture_path: true,
-                      m_is_deleted: true,
                     },
                   },
                 },
@@ -396,101 +396,87 @@ export const outletMenuController = {
         },
       });
 
-      // 2️⃣ Clean main menu data
-      const cleanedMenus = result
-        .filter((item) => item.menu)
-        .map((item) => ({
-          ...removeColumnPrefix(item),
-          menu: removeColumnPrefix(item.menu!),
-        }));
-
-      // 3️⃣ Collect all subitem IDs to fetch outlet-specific data
-      const subitemIds = [
-        ...new Set(
-          cleanedMenus.flatMap(
-            (item) =>
-              item.menu.menu_subitem_childs?.map(
-                (c: { subitem: { m_id: number } }) => c.subitem.m_id
-              ) || []
+      // Collect all subitem IDs to fetch outlet-specific data
+      const subitemIds = Array.from(
+        new Set(
+          mainMenus.flatMap(
+            (om) =>
+              om.menu.menu_subitem_childs?.map((c) => c.ms_subitem_id) || []
           )
-        ),
-      ];
+        )
+      );
 
-      const subitemOutletMenus = await db.outlet_menu.findMany({
-        where: {
-          om_o_id: params.outlet_id,
-          om_m_id: { in: subitemIds },
-          om_is_deleted: false,
-        },
-        select: {
-          om_m_id: true,
-          om_price: true,
-          om_stock: true,
-          om_is_selling: true,
-        },
-      });
+      const subitemPrices =
+        subitemIds.length > 0
+          ? await db.outlet_menu.findMany({
+              where: {
+                om_o_id: params.outlet_id,
+                om_m_id: { in: subitemIds },
+                om_is_deleted: false,
+              },
+              select: {
+                om_m_id: true,
+                om_price: true,
+                om_stock: true,
+                om_is_selling: true,
+              },
+            })
+          : [];
 
-      const subitemPriceMap = new Map(
-        subitemOutletMenus.map((s) => [
-          s.om_m_id,
-          { price: s.om_price, stock: s.om_stock, is_selling: s.om_is_selling },
+      const priceMap = new Map(
+        subitemPrices.map((p) => [
+          p.om_m_id,
+          { price: p.om_price, stock: p.om_stock, is_selling: p.om_is_selling },
         ])
       );
 
-      // 4️⃣ Attach subitems (deduplicated) to each main menu
-      const menusWithSubitems = cleanedMenus.map((item) => {
-        const menuSubitems = item.menu.menu_subitem_childs ?? [];
-
-        const dedupedSubitems = Array.from(
-          new Map(
-            menuSubitems.map(({ subitem }: { subitem: any }) => [
-              subitem.m_id,
-              subitem,
-            ])
-          ).values()
-        ).map((subitem: any) => {
-          const outletData = subitemPriceMap.get(subitem.m_id);
-          return {
-            ...removeColumnPrefix(subitem),
-            price: outletData?.price ?? null,
-            stock: outletData?.stock ?? null,
-            is_selling: outletData?.is_selling ?? false,
-          };
-        });
+      // Normalize menus and attach subitems
+      const normalizedMenus = mainMenus.map((item) => {
+        const cleanMenu = removeColumnPrefix(item.menu);
+        const subitemChilds = cleanMenu.menu_subitem_childs ?? [];
+        delete cleanMenu.menu_subitem_childs;
 
         return {
-          ...item,
-          menu: {
-            ...item.menu,
-            subitems: dedupedSubitems,
-            menu_subitem_childs: undefined, // remove join array
-          },
+          id: item.om_id,
+          m_id: cleanMenu.id,
+          o_id: item.om_o_id,
+          price: item.om_price,
+          stock: item.om_stock,
+          is_selling: item.om_is_selling,
+          ...cleanMenu,
+
+          subitems: subitemChilds.map((msc: any) => {
+            const sub = removeColumnPrefix(msc.subitem);
+            const price = priceMap.get(sub.id);
+
+            return {
+              ...sub,
+              price: price?.price ?? null,
+              stock: price?.stock ?? null,
+              is_selling: price?.is_selling ?? false,
+            };
+          }),
         };
       });
 
-      // 5️⃣ Group by category
-      type GroupedMenus = { category: string; menus: typeof menusWithSubitems };
-      const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
+      // Group by category
+      const groupedByCategory = Object.values(
+        normalizedMenus.reduce((acc: any, menu) => {
+          const category = menu.category ?? "Uncategorized";
 
-      const groupedMap = new Map<string, typeof menusWithSubitems>();
-      menusWithSubitems.forEach((item) => {
-        const category = normalizeCategory(item.menu.category);
-        const arr = groupedMap.get(category) ?? [];
-        arr.push(item);
-        groupedMap.set(category, arr);
-      });
+          if (!acc[category]) {
+            acc[category] = {
+              category,
+              menus: [],
+            };
+          }
 
-      // 6️⃣ Convert to sorted array
-      const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([category, menus]) => ({
-          category,
-          menus: menus.sort((a, b) =>
-            (a.menu?.m_name ?? "").localeCompare(b.menu?.m_name ?? "")
-          ),
-        }));
+          acc[category].menus.push(menu);
+          return acc;
+        }, {})
+      );
 
-      return groupedArray;
+      return groupedByCategory;
     } catch (error) {
       console.error("searchOutletMenus error:", error);
       throw error;
