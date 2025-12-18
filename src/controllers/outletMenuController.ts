@@ -128,7 +128,7 @@ export const outletMenuController = {
     }
   },
 
-  // GET OUTLET MENU BY OUTLET ID
+  // GET OUTLET MENU BY OUTLET ID — GROUPED BY CATEGORY (CUSTOM SHAPE)
   getOutletMenusByOutletId: async (outletId: number) => {
     try {
       const result = await db.outlet_menu.findMany({
@@ -147,6 +147,7 @@ export const outletMenuController = {
         },
         select: {
           om_id: true,
+          om_o_id: true,
           om_price: true,
           om_stock: true,
           om_is_selling: true,
@@ -182,16 +183,33 @@ export const outletMenuController = {
         },
       });
 
-      return result.map((item) => ({
-        id: item.om_id,
-        price: item.om_price,
-        stock: item.om_stock,
-        is_selling: item.om_is_selling,
+      // 🔹 GROUP BY CATEGORY & RESHAPE
+      const grouped = result.reduce((acc, item) => {
+        const category = item.menu.m_category || "Uncategorized";
 
-        menu: {
+        if (!acc[category]) {
+          acc[category] = {
+            category,
+            menus: [],
+          };
+        }
+
+        acc[category].menus.push({
+          id: item.om_id, // outlet_menu id
+          o_id: item.om_o_id, // outlet id
+          price: item.om_price,
+          stock: item.om_stock,
+          is_selling: item.om_is_selling,
+
           ...removeColumnPrefix(item.menu),
-        },
-      }));
+        });
+
+        return acc;
+      }, {} as Record<string, { category: string; menus: any[] }>);
+
+      return {
+        data: Object.values(grouped),
+      };
     } catch (error) {
       console.error("getOutletMenusByOutletId error:", error);
       throw error;
@@ -258,94 +276,6 @@ export const outletMenuController = {
   },
 
   // SEARCH OUTLET MENUS
-  searchOutletMenus: async (params: {
-    outlet_id: number;
-    keyword?: string;
-    category?: string;
-  }) => {
-    try {
-      const keyword = params.keyword?.trim() || undefined;
-
-      const result = await db.outlet_menu.findMany({
-        where: {
-          om_o_id: params.outlet_id,
-          om_is_deleted: false,
-          om_is_selling: true, // only selling items
-          menu: {
-            is: {
-              m_is_deleted: false,
-              ...(params.category && { m_category: params.category }),
-              ...(keyword && { OR: [{ m_name: { contains: keyword } }] }),
-            },
-          },
-        },
-        orderBy: [
-          { om_is_selling: "desc" }, // selling first
-          { om_stock: "desc" }, // in-stock first
-          { menu: { m_name: "asc" } },
-        ],
-        select: {
-          om_id: true,
-          om_m_id: true,
-          om_o_id: true,
-          om_price: true,
-          om_stock: true,
-          om_is_selling: true,
-          om_created_at: true,
-          om_updated_at: true,
-          menu: {
-            select: {
-              m_id: true,
-              m_sku: true,
-              m_name: true,
-              m_desc: true,
-              m_category: true,
-              m_picture_url: true,
-              m_picture_path: true,
-            },
-          },
-        },
-      });
-
-      // CLEAN & FLATTEN
-      const cleanedMenus = result
-        .filter((item) => item.menu) // remove rows with no menu
-        .map((item) => ({
-          ...removeColumnPrefix(item),
-          menu: removeColumnPrefix(item.menu!),
-        }));
-
-      // GROUP BY CATEGORY
-      type GroupedMenus = { category: string; menus: typeof cleanedMenus };
-
-      const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
-
-      const groupedMap = new Map<string, typeof cleanedMenus>();
-
-      cleanedMenus.forEach((item) => {
-        const category = normalizeCategory(item.menu.category);
-        const arr = groupedMap.get(category) ?? [];
-        arr.push(item);
-        groupedMap.set(category, arr);
-      });
-
-      // CONVERT TO SORTED ARRAY
-      const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([category, menus]) => ({
-          category,
-          menus: menus.sort((a, b) =>
-            (a.menu?.m_name ?? "").localeCompare(b.menu?.m_name ?? "")
-          ),
-        }));
-
-      return groupedArray;
-    } catch (error) {
-      console.error("searchOutletMenus error:", error);
-      throw error;
-    }
-  },
-
   searchOutletMenusByOutletId: async (outlet_id: number, keyword?: string) => {
     try {
       const result = await db.outlet_menu.findMany({
