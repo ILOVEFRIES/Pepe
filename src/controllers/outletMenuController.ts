@@ -337,7 +337,7 @@ export const outletMenuController = {
     try {
       const keyword = params.keyword?.trim() || undefined;
 
-      // Fetch main menus (exclude subitems)
+      // 1️⃣ Fetch main menus (exclude subitems)
       const mainMenus = await db.outlet_menu.findMany({
         where: {
           om_o_id: params.outlet_id,
@@ -359,13 +359,11 @@ export const outletMenuController = {
         ],
         select: {
           om_id: true,
-          om_m_id: true,
-          om_o_id: true,
           om_price: true,
           om_stock: true,
           om_is_selling: true,
-          om_created_at: true,
-          om_updated_at: true,
+          om_m_id: true,
+          om_o_id: true,
           menu: {
             select: {
               m_id: true,
@@ -396,7 +394,7 @@ export const outletMenuController = {
         },
       });
 
-      // Collect all subitem IDs to fetch outlet-specific data
+      // 2️⃣ Collect all subitem IDs to fetch outlet-specific prices
       const subitemIds = Array.from(
         new Set(
           mainMenus.flatMap(
@@ -423,14 +421,17 @@ export const outletMenuController = {
             })
           : [];
 
-      const priceMap = new Map(
+      const priceMap = new Map<
+        number,
+        { price: number; stock: number | null; is_selling: boolean }
+      >(
         subitemPrices.map((p) => [
           p.om_m_id,
           { price: p.om_price, stock: p.om_stock, is_selling: p.om_is_selling },
         ])
       );
 
-      // Normalize menus and attach subitems
+      // 3️⃣ Normalize menus and attach subitems
       const normalizedMenus = mainMenus.map((item) => {
         const cleanMenu = removeColumnPrefix(item.menu);
         const subitemChilds = cleanMenu.menu_subitem_childs ?? [];
@@ -459,7 +460,7 @@ export const outletMenuController = {
         };
       });
 
-      // Group by category
+      // 4️⃣ Group by category
       const groupedByCategory = Object.values(
         normalizedMenus.reduce((acc: any, menu) => {
           const category = menu.category ?? "Uncategorized";
