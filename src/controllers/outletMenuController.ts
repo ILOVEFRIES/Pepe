@@ -350,9 +350,9 @@ export const outletMenuController = {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([category, menus]) => ({
           category,
-          menus: menus.sort((a, b) =>
-            a.menu.m_name.localeCompare(b.menu.m_name)
-          ),
+          menus: menus
+            .filter((m) => m.menu && m.menu.m_name)
+            .sort((a, b) => a.menu.m_name.localeCompare(b.menu.m_name)),
         }));
 
       return groupedArray;
