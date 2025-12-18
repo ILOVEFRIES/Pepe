@@ -337,7 +337,7 @@ export const outletMenuController = {
     try {
       const keyword = params.keyword?.trim() || undefined;
 
-      // 1️⃣ Fetch main menus (exclude subitems)
+      // Fetch main menus (exclude subitems)
       const mainMenus = await db.outlet_menu.findMany({
         where: {
           om_o_id: params.outlet_id,
@@ -394,7 +394,7 @@ export const outletMenuController = {
         },
       });
 
-      // 2️⃣ Collect all subitem IDs to fetch outlet-specific prices
+      // Collect all subitem IDs to fetch outlet-specific prices
       const subitemIds = Array.from(
         new Set(
           mainMenus.flatMap(
@@ -431,7 +431,7 @@ export const outletMenuController = {
         ])
       );
 
-      // 3️⃣ Normalize menus and attach subitems
+      // Normalize menus and attach subitems
       const normalizedMenus = mainMenus.map((item) => {
         const cleanMenu = removeColumnPrefix(item.menu);
         const subitemChilds = cleanMenu.subitem_childs ?? [];
@@ -460,7 +460,7 @@ export const outletMenuController = {
         };
       });
 
-      // 4️⃣ Group by category
+      // Group by category
       const groupedByCategory = Object.values(
         normalizedMenus.reduce((acc: any, menu) => {
           const category = menu.category ?? "Uncategorized";
