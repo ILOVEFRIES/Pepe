@@ -211,8 +211,10 @@ export const outletMenuController = {
       );
 
       return result.map((item) => {
-        const { menu_subitem_childs: _menu_subitem_childs, ...cleanMenu } =
-          removeColumnPrefix(item.menu);
+        const cleanMenu = removeColumnPrefix(item.menu);
+
+        // remove redundancy explicitly
+        delete (cleanMenu as any).menu_subitem_childs;
 
         return {
           id: item.om_id,
@@ -222,6 +224,7 @@ export const outletMenuController = {
 
           menu: {
             ...cleanMenu,
+
             subitems: item.menu.menu_subitem_childs.map(({ subitem }) => {
               const outletData = subitemPriceMap.get(subitem.m_id);
 
