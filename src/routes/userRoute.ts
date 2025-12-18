@@ -80,7 +80,7 @@ export function userRoutes(app: any) {
           })
       )
 
-      // CREATE USER - Admin only
+      // CREATE CUSTOMER
       .guard(
         {
           body: t.Object({
@@ -91,61 +91,99 @@ export function userRoutes(app: any) {
               // Require at least one uppercase, one lowercase, one number
               pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
             }),
-            type: t.Enum(UserType),
           }),
         },
         (guardApp: any) =>
-          guardApp.post("/", async ({ body, set }: any) => {
+          guardApp.post("/register/customer", async ({ body, set }: any) => {
             try {
-              //   // Check if user is admin
-              //   if (!hasPermission(auth.user!.type, [UserType.admin])) {
-              //     set.status = 403;
-              //     return {
-              //       success: false,
-              //       message: "Insufficient permissions",
-              //     };
-              //   }
-
-              // Hash password using Bun's built-in bcrypt-like hashing
               const hashedPassword = await Bun.password.hash(body.password, {
                 algorithm: "bcrypt",
                 cost: 10,
               });
 
-              // Create new user
               const result = await userController.createUser({
                 u_email: body.email,
                 u_password: hashedPassword,
-                u_type: body.type,
+                u_type: UserType.customer,
               });
 
               return {
                 success: true,
-                message: "User has been created",
+                message: "Customer registered successfully",
                 result,
               };
-            } catch (error) {
-              if (
-                error &&
-                typeof error === "object" &&
-                "code" in error &&
-                error.code === "P2002"
-              ) {
+            } catch (error: any) {
+              if (error?.code === "P2002") {
                 set.status = 409;
-                return {
-                  success: false,
-                  message: "Duplicate entry",
-                };
+                return { success: false, message: "Email already exists" };
               }
 
-              console.error("Create user error:", error);
+              console.error("Customer register error:", error);
               set.status = 500;
-              return {
-                success: false,
-                message: "Something went wrong",
-              };
+              return { success: false, message: "Something went wrong" };
             }
           })
+      )
+
+      .guard(
+        {
+          body: t.Object({
+            email: t.String({ format: "email" }),
+            password: t.String({
+              minLength: 8,
+              maxLength: 128,
+              // Require at least one uppercase, one lowercase, one number
+              pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
+            }),
+          }),
+        },
+        (guardApp: any) =>
+          guardApp.post(
+            "/register/admin",
+            async ({ headers, body, set }: any) => {
+              try {
+                const auth = verifyAuth(headers);
+                if (!auth.valid) {
+                  set.status = 403;
+                  return { success: false, message: auth.error };
+                }
+
+                if (!hasPermission(auth.user!.type, [UserType.admin])) {
+                  set.status = 403;
+                  return {
+                    success: false,
+                    message: "Only admins can create admin accounts",
+                  };
+                }
+
+                const hashedPassword = await Bun.password.hash(body.password, {
+                  algorithm: "bcrypt",
+                  cost: 10,
+                });
+
+                const result = await userController.createUser({
+                  u_email: body.email,
+                  u_password: hashedPassword,
+                  u_type: UserType.admin,
+                });
+
+                return {
+                  success: true,
+                  message: "Admin registered successfully",
+                  result,
+                };
+              } catch (error: any) {
+                if (error?.code === "P2002") {
+                  set.status = 409;
+                  return { success: false, message: "Email already exists" };
+                }
+
+                console.error("Admin register error:", error);
+                set.status = 500;
+                return { success: false, message: "Something went wrong" };
+              }
+            }
+          )
       )
 
       // CHANGE PASSWORD - Users can change their own password
