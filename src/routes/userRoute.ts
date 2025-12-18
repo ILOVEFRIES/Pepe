@@ -101,16 +101,32 @@ export function userRoutes(app: any) {
                 cost: 10,
               });
 
-              const result = await userController.createUser({
+              const user = await userController.createUser({
                 u_email: body.email,
                 u_password: hashedPassword,
                 u_type: UserType.customer,
               });
 
+              const payload = {
+                userId: (user as { id: number }).id,
+                type: (user as { type: UserType }).type,
+              } as jwt.JwtPayload;
+
+              const options = {
+                expiresIn: process.env.JWT_EXPIRES ?? "30d",
+              } as jwt.SignOptions;
+
+              const token = jwt.sign(
+                payload,
+                process.env.JWT_SECRET as string,
+                options
+              );
+
               return {
                 success: true,
                 message: "Customer registered successfully",
-                result,
+                user,
+                token,
               };
             } catch (error: any) {
               if (error?.code === "P2002") {
@@ -161,16 +177,32 @@ export function userRoutes(app: any) {
                   cost: 10,
                 });
 
-                const result = await userController.createUser({
+                const user = await userController.createUser({
                   u_email: body.email,
                   u_password: hashedPassword,
                   u_type: UserType.admin,
                 });
 
+                const payload = {
+                  userId: (user as { id: number }).id,
+                  type: (user as { type: UserType }).type,
+                } as jwt.JwtPayload;
+
+                const options = {
+                  expiresIn: process.env.JWT_EXPIRES ?? "30d",
+                } as jwt.SignOptions;
+
+                const token = jwt.sign(
+                  payload,
+                  process.env.JWT_SECRET as string,
+                  options
+                );
+
                 return {
                   success: true,
                   message: "Admin registered successfully",
-                  result,
+                  user,
+                  token,
                 };
               } catch (error: any) {
                 if (error?.code === "P2002") {
