@@ -225,7 +225,14 @@ export const outletMenuController = {
           menu: {
             ...cleanMenu,
 
-            subitems: item.menu.menu_subitem_childs.map(({ subitem }) => {
+            ssubitems: Array.from(
+              new Map(
+                item.menu.menu_subitem_childs.map(({ subitem }) => [
+                  subitem.m_id,
+                  subitem,
+                ])
+              ).values()
+            ).map((subitem) => {
               const outletData = subitemPriceMap.get(subitem.m_id);
 
               return {
