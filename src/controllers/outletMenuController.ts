@@ -69,49 +69,9 @@ export const outletMenuController = {
         },
         select: {
           om_id: true,
-          om_m_id: true,
-          om_o_id: true,
           om_price: true,
           om_stock: true,
           om_is_selling: true,
-          om_created_at: true,
-          om_updated_at: true,
-        },
-      });
-
-      return result ? removeColumnPrefix(result) : null;
-    } catch (error) {
-      console.error("getOutletMenuById error:", error);
-      throw error;
-    }
-  },
-
-  // GET OUTLET MENU BY OUTLET ID
-  getOutletMenusByOutletId: async (outletId: number) => {
-    try {
-      const result = await db.outlet_menu.findMany({
-        where: {
-          om_o_id: outletId,
-          om_is_deleted: false,
-          om_is_selling: true,
-          menu: {
-            m_is_deleted: false,
-          },
-        },
-        orderBy: {
-          menu: {
-            m_name: "asc",
-          },
-        },
-        select: {
-          om_id: true,
-          om_m_id: true,
-          om_o_id: true,
-          om_price: true,
-          om_stock: true,
-          om_is_selling: true,
-          om_created_at: true,
-          om_updated_at: true,
 
           menu: {
             select: {
@@ -144,49 +104,94 @@ export const outletMenuController = {
         },
       });
 
-      // CLEAN & FLATTEN RESPONSE
-      const cleanedMenus = result.map((item) => {
-        const cleaned = removeColumnPrefix(item);
+      if (!result) return null;
 
-        return {
-          ...cleaned,
-          menu: {
-            ...removeColumnPrefix(cleaned.menu),
-            subitems: cleaned.menu.menu_subitem_childs
-              .filter((ms: any) => !ms.subitem.m_is_deleted)
-              .map((ms: any) => removeColumnPrefix(ms.subitem)),
-          },
-        };
-      });
+      const cleanedMenu = removeColumnPrefix(result.menu);
 
-      type GroupedMenus = {
-        category: string;
-        menus: typeof cleanedMenus;
+      return {
+        id: result.om_id,
+        price: result.om_price,
+        stock: result.om_stock,
+        is_selling: result.om_is_selling,
+
+        menu: {
+          ...cleanedMenu,
+          menu_subitem_childs:
+            cleanedMenu.menu_subitem_childs?.map((msc: any) => ({
+              subitem: removeColumnPrefix(msc.subitem),
+            })) ?? [],
+        },
       };
+    } catch (error) {
+      console.error("getOutletMenuById error:", error);
+      throw error;
+    }
+  },
 
-      const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
+  // GET OUTLET MENU BY OUTLET ID
+  getOutletMenusByOutletId: async (outletId: number) => {
+    try {
+      const result = await db.outlet_menu.findMany({
+        where: {
+          om_o_id: outletId,
+          om_is_deleted: false,
+          om_is_selling: true,
+          menu: {
+            m_is_deleted: false,
+          },
+        },
+        orderBy: {
+          menu: {
+            m_name: "asc",
+          },
+        },
+        select: {
+          om_id: true,
+          om_price: true,
+          om_stock: true,
+          om_is_selling: true,
 
-      // Use Map instead of plain object to avoid object injection warnings
-      const groupedMap = new Map<string, typeof cleanedMenus>();
-
-      cleanedMenus.forEach((item) => {
-        const category = normalizeCategory(item.menu.category);
-        const arr = groupedMap.get(category) ?? [];
-        arr.push(item);
-        groupedMap.set(category, arr);
+          menu: {
+            select: {
+              m_id: true,
+              m_sku: true,
+              m_name: true,
+              m_desc: true,
+              m_category: true,
+              m_picture_url: true,
+              m_picture_path: true,
+              m_is_subitem: true,
+              menu_subitem_childs: {
+                select: {
+                  subitem: {
+                    select: {
+                      m_id: true,
+                      m_sku: true,
+                      m_name: true,
+                      m_desc: true,
+                      m_category: true,
+                      m_picture_url: true,
+                      m_picture_path: true,
+                      m_is_deleted: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
-      // Convert Map to array and sort
-      const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([category, menus]) => ({
-          category,
-          menus: menus.sort((a, b) =>
-            a.menu.m_name.localeCompare(b.menu.m_name)
-          ),
-        }));
+      return result.map((item) => ({
+        id: item.om_id,
+        price: item.om_price,
+        stock: item.om_stock,
+        is_selling: item.om_is_selling,
 
-      return groupedArray;
+        menu: {
+          ...removeColumnPrefix(item.menu),
+        },
+      }));
     } catch (error) {
       console.error("getOutletMenusByOutletId error:", error);
       throw error;
@@ -224,7 +229,7 @@ export const outletMenuController = {
               m_category: true,
               m_picture_url: true,
               m_picture_path: true,
-
+              m_is_subitem: true,
               menu_subitem_childs: {
                 select: {
                   subitem: {
