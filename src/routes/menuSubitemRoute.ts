@@ -11,6 +11,10 @@ export function menuSubitemRoutes(app: any) {
       rateLimit({
         duration: 60000,
         max: 100,
+        generator: (req) =>
+          req.headers.get("cf-connecting-ip") ??
+          req.headers.get("x-forwarded-for") ??
+          "unknown",
       })
     )
     .guard({}, (guardApp: any) =>
