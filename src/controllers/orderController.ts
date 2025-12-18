@@ -189,9 +189,10 @@ export const orderController = {
       for (const item of orderData.items) {
         const menu = await db.menu.findUnique({
           where: { m_id: item.menu_id },
-          select: { m_name: true },
+          select: { m_name: true, m_picture_url: true },
         });
         item.name = menu?.m_name || "Unknown Item";
+        item.picture_url = menu?.m_picture_url || null;
 
         if (item.subitems?.length) {
           for (const sub of item.subitems) {
