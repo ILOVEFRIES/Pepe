@@ -1,27 +1,18 @@
-#!/usr/bin/env bash
-set -euo pipefail
+# Load Bun path dynamically
+export PATH=$(dirname "$(which bun)"):$PATH
 
-# Move to repo root (deploy/ -> repo root)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$REPO_ROOT"
-
-# Bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-# Load env
+# Load .env from the parent folder
 set -a
-source .env
+source ../.env
 set +a
 
-# Deploy
-git fetch origin
-git reset --hard origin/master
-
+# Deployment steps
+cd ..
+git pull origin master
 bun install
 bunx prisma generate
 bunx prisma migrate deploy
+bunx prisma generate
 bun run build
-
-pm2 restart "$PM2_NAME" --update-env
+#/ $PM2_NAME is defined in the .env file
+pm2 restart $PM2_NAME
