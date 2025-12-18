@@ -204,7 +204,6 @@ export function outletMenuRoutes(app: any) {
             outlet_id: t.Numeric(),
             keyword: t.Optional(t.String()),
             category: t.Optional(t.String()),
-            is_selling: t.Optional(t.Boolean()),
           }),
         },
         (guardApp: any) =>
@@ -234,7 +233,6 @@ export function outletMenuRoutes(app: any) {
                 outlet_id: query.outlet_id,
                 keyword: query.keyword,
                 category: query.category,
-                is_selling: query.is_selling,
               });
 
               return {

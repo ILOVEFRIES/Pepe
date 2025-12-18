@@ -262,7 +262,6 @@ export const outletMenuController = {
     outlet_id: number;
     keyword?: string;
     category?: string;
-    is_selling?: boolean;
   }) => {
     try {
       const keyword = params.keyword?.trim().length
@@ -273,11 +272,7 @@ export const outletMenuController = {
         where: {
           om_o_id: params.outlet_id,
           om_is_deleted: false,
-
-          ...(params.is_selling !== undefined && {
-            om_is_selling: params.is_selling,
-          }),
-
+          om_is_selling: true,
           menu: {
             is: {
               m_is_deleted: false,
