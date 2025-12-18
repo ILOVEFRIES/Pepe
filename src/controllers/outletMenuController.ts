@@ -131,27 +131,21 @@ export const outletMenuController = {
   // GET OUTLET MENU BY OUTLET ID
   getOutletMenusByOutletId: async (outletId: number) => {
     try {
-      // 1. Get parent outlet menus
       const result = await db.outlet_menu.findMany({
         where: {
           om_o_id: outletId,
           om_is_deleted: false,
           om_is_selling: true,
-          menu: {
-            m_is_deleted: false,
-          },
+          menu: { m_is_deleted: false },
         },
         orderBy: {
-          menu: {
-            m_name: "asc",
-          },
+          menu: { m_name: "asc" },
         },
         select: {
           om_id: true,
           om_price: true,
           om_stock: true,
           om_is_selling: true,
-
           menu: {
             select: {
               m_id: true,
@@ -162,7 +156,6 @@ export const outletMenuController = {
               m_picture_url: true,
               m_picture_path: true,
               m_is_subitem: true,
-
               menu_subitem_childs: {
                 select: {
                   subitem: {
@@ -184,7 +177,6 @@ export const outletMenuController = {
         },
       });
 
-      // 2. Collect unique subitem IDs
       const subitemIds = [
         ...new Set(
           result.flatMap((item) =>
@@ -193,7 +185,6 @@ export const outletMenuController = {
         ),
       ];
 
-      // 3. Fetch outlet_menu prices for subitems
       const subitemOutletMenus = await db.outlet_menu.findMany({
         where: {
           om_o_id: outletId,
@@ -208,11 +199,7 @@ export const outletMenuController = {
         },
       });
 
-      // 4. Create price lookup map
-      const subitemPriceMap = new Map<
-        number,
-        { price: number; stock: number | null; is_selling: boolean }
-      >(
+      const subitemPriceMap = new Map(
         subitemOutletMenus.map((s) => [
           s.om_m_id,
           {
@@ -223,11 +210,9 @@ export const outletMenuController = {
         ])
       );
 
-      // 5. Merge subitem prices into response
       return result.map((item) => {
-        const { menu_subitem_childs, ...cleanMenu } = removeColumnPrefix(
-          item.menu
-        );
+        const { menu_subitem_childs: _menu_subitem_childs, ...cleanMenu } =
+          removeColumnPrefix(item.menu);
 
         return {
           id: item.om_id,
@@ -237,7 +222,6 @@ export const outletMenuController = {
 
           menu: {
             ...cleanMenu,
-
             subitems: item.menu.menu_subitem_childs.map(({ subitem }) => {
               const outletData = subitemPriceMap.get(subitem.m_id);
 
