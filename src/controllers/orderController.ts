@@ -163,9 +163,7 @@ export const orderController = {
   getOrderByUid: async (uid: string) => {
     try {
       const result = await db.order.findFirst({
-        where: {
-          or_uid: uid,
-        },
+        where: { or_uid: uid },
         select: {
           or_id: true,
           or_uid: true,
@@ -176,27 +174,44 @@ export const orderController = {
           or_sc: true,
           or_subtotal: true,
           or_grand_total: true,
-          or_order_item: true,
           or_created_at: true,
-
-          outlet: {
-            select: {
-              o_id: true,
-              o_name: true,
-            },
-          },
-          user: {
-            select: {
-              u_id: true,
-              u_email: true,
-            },
-          },
+          outlet: { select: { o_id: true, o_name: true } },
+          user: { select: { u_id: true, u_email: true } },
+          or_order_item: true,
         },
       });
 
       if (!result) return null;
 
-      return removeColumnPrefix(parseOrderItem(result));
+      const orderData = JSON.parse(result.or_order_item);
+
+      // Attach item & subitem names
+      for (const item of orderData.items) {
+        const menu = await db.menu.findUnique({
+          where: { m_id: item.menu_id },
+          select: { m_name: true },
+        });
+        item.name = menu?.m_name || "Unknown Item";
+
+        if (item.subitems?.length) {
+          for (const sub of item.subitems) {
+            const subMenu = await db.menu.findUnique({
+              where: { m_id: sub.menu_id },
+              select: { m_name: true },
+            });
+            sub.name = subMenu?.m_name || "Unknown Subitem";
+          }
+        }
+      }
+
+      // Return only enriched object, without the raw order_item string
+      const cleanedResult = removeColumnPrefix(result);
+      delete (cleanedResult as any).order_item; // remove the raw string if present
+
+      return {
+        ...cleanedResult,
+        or_order_item: orderData,
+      };
     } catch (error) {
       console.error("getOrderByUid error:", error);
       throw error;
