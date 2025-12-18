@@ -337,6 +337,7 @@ export const outletMenuController = {
     try {
       const keyword = params.keyword?.trim() || undefined;
 
+      // 1️⃣ Fetch main menus (exclude subitems)
       const result = await db.outlet_menu.findMany({
         where: {
           om_o_id: params.outlet_id,
@@ -345,6 +346,7 @@ export const outletMenuController = {
           menu: {
             is: {
               m_is_deleted: false,
+              m_is_subitem: false, // EXCLUDE subitems here
               ...(params.category && { m_category: params.category }),
               ...(keyword && { OR: [{ m_name: { contains: keyword } }] }),
             },
@@ -394,6 +396,7 @@ export const outletMenuController = {
         },
       });
 
+      // 2️⃣ Clean main menu data
       const cleanedMenus = result
         .filter((item) => item.menu)
         .map((item) => ({
@@ -401,6 +404,7 @@ export const outletMenuController = {
           menu: removeColumnPrefix(item.menu!),
         }));
 
+      // 3️⃣ Collect all subitem IDs to fetch outlet-specific data
       const subitemIds = [
         ...new Set(
           cleanedMenus.flatMap(
@@ -433,7 +437,7 @@ export const outletMenuController = {
         ])
       );
 
-      // 4️⃣ Attach subitems (deduplicated) to each menu
+      // 4️⃣ Attach subitems (deduplicated) to each main menu
       const menusWithSubitems = cleanedMenus.map((item) => {
         const menuSubitems = item.menu.menu_subitem_childs ?? [];
 
@@ -459,8 +463,7 @@ export const outletMenuController = {
           menu: {
             ...item.menu,
             subitems: dedupedSubitems,
-            // remove original join array to avoid confusion
-            menu_subitem_childs: undefined,
+            menu_subitem_childs: undefined, // remove join array
           },
         };
       });
