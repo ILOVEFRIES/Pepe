@@ -12,8 +12,12 @@ export function userRoutes(app: any) {
       // Add rate limiting
       .use(
         rateLimit({
-          duration: 60000, // 1 minute
-          max: 100, // 100 requests per minute
+          duration: 60000,
+          max: 100,
+          generator: (req) =>
+            req.headers.get("cf-connecting-ip") ??
+            req.headers.get("x-forwarded-for") ??
+            "unknown",
         })
       )
 

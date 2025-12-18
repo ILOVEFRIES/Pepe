@@ -16,6 +16,10 @@ export function menuRoutes(app: any) {
       rateLimit({
         duration: 60000,
         max: 100,
+        generator: (req) =>
+          req.headers.get("cf-connecting-ip") ??
+          req.headers.get("x-forwarded-for") ??
+          "unknown",
       })
     )
 
@@ -93,7 +97,7 @@ export function menuRoutes(app: any) {
             body: t.Object({
               sku: t.String(),
               name: t.String(),
-              desc: t.String(),
+              desc: t.Optional(t.String()),
               category: t.String(),
 
               // image upload (multipart/form-data)
