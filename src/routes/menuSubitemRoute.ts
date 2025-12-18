@@ -84,8 +84,8 @@ export function menuSubitemRoutes(app: any) {
 
               try {
                 const result = await menuSubitemController.addMenuSubitems({
-                  parentId: body.parentId,
-                  subitemIds: body.subitemIds,
+                  parentId: body.parent_id,
+                  subitemIds: body.subitem_ids,
                 });
 
                 return {
