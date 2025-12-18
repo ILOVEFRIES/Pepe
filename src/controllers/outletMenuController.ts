@@ -346,6 +346,86 @@ export const outletMenuController = {
     }
   },
 
+  searchOutletMenusByOutletId: async (outlet_id: number, keyword?: string) => {
+    try {
+      const result = await db.outlet_menu.findMany({
+        where: {
+          om_o_id: outlet_id,
+          om_is_deleted: false,
+          om_is_selling: true,
+
+          menu: {
+            m_is_deleted: false,
+
+            ...(keyword && {
+              OR: [
+                { m_name: { contains: keyword } },
+                { m_desc: { contains: keyword } },
+              ],
+            }),
+          },
+        },
+
+        orderBy: {
+          menu: {
+            m_name: "asc",
+          },
+        },
+
+        select: {
+          om_id: true,
+          om_price: true,
+          om_stock: true,
+          om_is_selling: true,
+
+          menu: {
+            select: {
+              m_id: true,
+              m_sku: true,
+              m_name: true,
+              m_desc: true,
+              m_category: true,
+              m_picture_url: true,
+              m_picture_path: true,
+              m_is_subitem: true,
+
+              menu_subitem_childs: {
+                select: {
+                  subitem: {
+                    select: {
+                      m_id: true,
+                      m_sku: true,
+                      m_name: true,
+                      m_desc: true,
+                      m_category: true,
+                      m_picture_url: true,
+                      m_picture_path: true,
+                      m_is_deleted: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return result.map((item) => ({
+        id: item.om_id,
+        price: item.om_price,
+        stock: item.om_stock,
+        is_selling: item.om_is_selling,
+
+        menu: {
+          ...removeColumnPrefix(item.menu),
+        },
+      }));
+    } catch (error) {
+      console.error("searchOutletMenusByOutletId error:", error);
+      throw error;
+    }
+  },
+
   // CREATE OUTLET MENU
   createOutletMenu: async (data: {
     om_m_id: number;

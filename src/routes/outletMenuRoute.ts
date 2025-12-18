@@ -229,11 +229,11 @@ export function outletMenuRoutes(app: any) {
             }
 
             try {
-              const data = await outletMenuController.searchOutletMenus({
-                outlet_id: query.outlet_id,
-                keyword: query.keyword,
-                category: query.category,
-              });
+              const data =
+                await outletMenuController.searchOutletMenusByOutletId(
+                  query.outlet_id,
+                  query.keyword
+                );
 
               return {
                 success: true,
