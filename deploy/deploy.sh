@@ -34,7 +34,6 @@ git fetch origin master
 git reset --hard origin/master
 
 # Build & migrate
-# Build & migrate
 cd "$PROJECT_ROOT"
 echo "Current dir: $(pwd)"
 ls -l prisma/schema.prisma
