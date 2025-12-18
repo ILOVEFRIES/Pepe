@@ -341,7 +341,7 @@ export const outletMenuController = {
         where: {
           om_o_id: params.outlet_id,
           om_is_deleted: false,
-          om_is_selling: true, // only selling items
+          om_is_selling: true,
           menu: {
             is: {
               m_is_deleted: false,
@@ -351,8 +351,8 @@ export const outletMenuController = {
           },
         },
         orderBy: [
-          { om_is_selling: "desc" }, // selling first
-          { om_stock: "desc" }, // in-stock first
+          { om_is_selling: "desc" },
+          { om_stock: "desc" },
           { menu: { m_name: "asc" } },
         ],
         select: {
@@ -373,34 +373,111 @@ export const outletMenuController = {
               m_category: true,
               m_picture_url: true,
               m_picture_path: true,
+              menu_subitem_childs: {
+                select: {
+                  subitem: {
+                    select: {
+                      m_id: true,
+                      m_sku: true,
+                      m_name: true,
+                      m_desc: true,
+                      m_category: true,
+                      m_picture_url: true,
+                      m_picture_path: true,
+                      m_is_deleted: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
       });
 
-      // CLEAN & FLATTEN
       const cleanedMenus = result
-        .filter((item) => item.menu) // remove rows with no menu
+        .filter((item) => item.menu)
         .map((item) => ({
           ...removeColumnPrefix(item),
           menu: removeColumnPrefix(item.menu!),
         }));
 
-      // GROUP BY CATEGORY
-      type GroupedMenus = { category: string; menus: typeof cleanedMenus };
+      const subitemIds = [
+        ...new Set(
+          cleanedMenus.flatMap(
+            (item) =>
+              item.menu.menu_subitem_childs?.map(
+                (c: { subitem: { m_id: number } }) => c.subitem.m_id
+              ) || []
+          )
+        ),
+      ];
 
+      const subitemOutletMenus = await db.outlet_menu.findMany({
+        where: {
+          om_o_id: params.outlet_id,
+          om_m_id: { in: subitemIds },
+          om_is_deleted: false,
+        },
+        select: {
+          om_m_id: true,
+          om_price: true,
+          om_stock: true,
+          om_is_selling: true,
+        },
+      });
+
+      const subitemPriceMap = new Map(
+        subitemOutletMenus.map((s) => [
+          s.om_m_id,
+          { price: s.om_price, stock: s.om_stock, is_selling: s.om_is_selling },
+        ])
+      );
+
+      // 4️⃣ Attach subitems (deduplicated) to each menu
+      const menusWithSubitems = cleanedMenus.map((item) => {
+        const menuSubitems = item.menu.menu_subitem_childs ?? [];
+
+        const dedupedSubitems = Array.from(
+          new Map(
+            menuSubitems.map(({ subitem }: { subitem: any }) => [
+              subitem.m_id,
+              subitem,
+            ])
+          ).values()
+        ).map((subitem: any) => {
+          const outletData = subitemPriceMap.get(subitem.m_id);
+          return {
+            ...removeColumnPrefix(subitem),
+            price: outletData?.price ?? null,
+            stock: outletData?.stock ?? null,
+            is_selling: outletData?.is_selling ?? false,
+          };
+        });
+
+        return {
+          ...item,
+          menu: {
+            ...item.menu,
+            subitems: dedupedSubitems,
+            // remove original join array to avoid confusion
+            menu_subitem_childs: undefined,
+          },
+        };
+      });
+
+      // 5️⃣ Group by category
+      type GroupedMenus = { category: string; menus: typeof menusWithSubitems };
       const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
 
-      const groupedMap = new Map<string, typeof cleanedMenus>();
-
-      cleanedMenus.forEach((item) => {
+      const groupedMap = new Map<string, typeof menusWithSubitems>();
+      menusWithSubitems.forEach((item) => {
         const category = normalizeCategory(item.menu.category);
         const arr = groupedMap.get(category) ?? [];
         arr.push(item);
         groupedMap.set(category, arr);
       });
 
-      // CONVERT TO SORTED ARRAY
+      // 6️⃣ Convert to sorted array
       const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([category, menus]) => ({
