@@ -15,4 +15,5 @@ bunx prisma migrate deploy
 bunx prisma generate
 bun run build
 #/ $PM2_NAME is defined in the .env file
+echo "PM2_NAME = ${PM2_NAME}"
 pm2 restart $PM2_NAME
