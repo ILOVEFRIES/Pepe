@@ -434,8 +434,8 @@ export const outletMenuController = {
       // 3️⃣ Normalize menus and attach subitems
       const normalizedMenus = mainMenus.map((item) => {
         const cleanMenu = removeColumnPrefix(item.menu);
-        const subitemChilds = cleanMenu.menu_subitem_childs ?? [];
-        delete cleanMenu.menu_subitem_childs;
+        const subitemChilds = cleanMenu.subitem_childs ?? [];
+        delete cleanMenu.subitem_childs;
 
         return {
           id: item.om_id,
