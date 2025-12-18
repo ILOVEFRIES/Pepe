@@ -1,19 +1,26 @@
-# Load Bun path dynamically
-export PATH=$(dirname "$(which bun)"):$PATH
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Load .env from the parent folder
+# Always run from script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# Load env
 set -a
 source ../.env
 set +a
 
-# Deployment steps
-cd app/Pepe/
-git pull origin master
+# Deploy
+git fetch origin
+git reset --hard origin/master
+
 bun install
 bunx prisma generate
 bunx prisma migrate deploy
-bunx prisma generate
 bun run build
-#/ $PM2_NAME is defined in the .env file
-echo "PM2_NAME = ${PM2_NAME}"
-pm2 restart $PM2_NAME
+
+pm2 restart "$PM2_NAME" --update-env
