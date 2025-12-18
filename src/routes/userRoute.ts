@@ -9,15 +9,18 @@ export function userRoutes(app: any) {
   return (
     app
 
-      // Add rate limiting
       .use(
         rateLimit({
-          duration: 60000,
+          duration: 60_000,
           max: 100,
-          generator: (req) =>
-            req.headers.get("cf-connecting-ip") ??
-            req.headers.get("x-forwarded-for") ??
-            "unknown",
+          generator: (req) => {
+            const ip =
+              req.headers.get("cf-connecting-ip") ??
+              req.headers.get("x-forwarded-for");
+
+            if (!ip) return crypto.randomUUID(); // fallback bucket
+            return ip.split(",")[0].trim();
+          },
         })
       )
 
