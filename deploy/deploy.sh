@@ -23,4 +23,4 @@ bunx prisma generate --schema=prisma/schema.prisma
 bunx prisma migrate deploy --schema=prisma/schema.prisma
 bun run build
 
-pm2 restart "$PM2_NAME" --update-env
+pm2 restart "$PM2_NAME" --update-env 
