@@ -34,11 +34,16 @@ git fetch origin master
 git reset --hard origin/master
 
 # Build & migrate
+# Build & migrate
 cd "$PROJECT_ROOT"
+echo "Current dir: $(pwd)"
+ls -l prisma/schema.prisma
+
 bun install
-bunx prisma generate
-bunx prisma migrate deploy
+bunx prisma generate --schema "$PROJECT_ROOT/prisma/schema.prisma"
+bunx prisma migrate deploy --schema "$PROJECT_ROOT/prisma/schema.prisma"
 bun run build
+
 
 # Restart PM2
 pm2 restart "$PM2_NAME" --update-env
