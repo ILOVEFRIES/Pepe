@@ -30,8 +30,8 @@ if ! command -v bun >/dev/null 2>&1; then
 fi
 
 # Git update
-git fetch origin main
-git reset --hard origin/main
+git fetch origin master
+git reset --hard origin/master
 
 # Build & migrate
 bun install
