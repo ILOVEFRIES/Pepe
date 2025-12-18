@@ -188,7 +188,7 @@ export const outletMenuController = {
       const subitemIds = [
         ...new Set(
           result.flatMap((item) =>
-            item.menu.menu_subitem_childs.map((child) => child.subitem.m_id)
+            item.menu.menu_subitem_childs.map((c) => c.subitem.m_id)
           )
         ),
       ];
@@ -224,27 +224,33 @@ export const outletMenuController = {
       );
 
       // 5. Merge subitem prices into response
-      return result.map((item) => ({
-        id: item.om_id,
-        price: item.om_price,
-        stock: item.om_stock,
-        is_selling: item.om_is_selling,
+      return result.map((item) => {
+        const { menu_subitem_childs, ...cleanMenu } = removeColumnPrefix(
+          item.menu
+        );
 
-        menu: {
-          ...removeColumnPrefix(item.menu),
+        return {
+          id: item.om_id,
+          price: item.om_price,
+          stock: item.om_stock,
+          is_selling: item.om_is_selling,
 
-          subitems: item.menu.menu_subitem_childs.map(({ subitem }) => {
-            const outletData = subitemPriceMap.get(subitem.m_id);
+          menu: {
+            ...cleanMenu,
 
-            return {
-              ...removeColumnPrefix(subitem),
-              price: outletData?.price ?? null,
-              stock: outletData?.stock ?? null,
-              is_selling: outletData?.is_selling ?? false,
-            };
-          }),
-        },
-      }));
+            subitems: item.menu.menu_subitem_childs.map(({ subitem }) => {
+              const outletData = subitemPriceMap.get(subitem.m_id);
+
+              return {
+                ...removeColumnPrefix(subitem),
+                price: outletData?.price ?? null,
+                stock: outletData?.stock ?? null,
+                is_selling: outletData?.is_selling ?? false,
+              };
+            }),
+          },
+        };
+      });
     } catch (error) {
       console.error("getOutletMenusByOutletId error:", error);
       throw error;
