@@ -125,10 +125,9 @@ export function outletMenuRoutes(app: any) {
               }
 
               try {
-                const data =
-                  await outletMenuController.getOutletMenusByOutletId(
-                    params.outlet_id
-                  );
+                const data = await outletMenuController.getOutletMenuByOutletId(
+                  params.outlet_id
+                );
 
                 return { success: true, data };
               } catch (error) {

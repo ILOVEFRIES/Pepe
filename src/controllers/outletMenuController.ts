@@ -129,23 +129,19 @@ export const outletMenuController = {
   },
 
   // GET OUTLET MENU BY OUTLET ID
-  getOutletMenusByOutletId: async (outletId: number) => {
+  getOutletMenuByOutletId: async (outletId: number) => {
     try {
       const result = await db.outlet_menu.findMany({
         where: {
           om_o_id: outletId,
           om_is_deleted: false,
-          om_is_selling: true,
-          menu: { m_is_deleted: false },
-        },
-        orderBy: {
-          menu: { m_name: "asc" },
         },
         select: {
           om_id: true,
           om_price: true,
           om_stock: true,
           om_is_selling: true,
+
           menu: {
             select: {
               m_id: true,
@@ -155,7 +151,7 @@ export const outletMenuController = {
               m_category: true,
               m_picture_url: true,
               m_picture_path: true,
-              m_is_subitem: true,
+
               menu_subitem_childs: {
                 select: {
                   subitem: {
@@ -167,7 +163,20 @@ export const outletMenuController = {
                       m_category: true,
                       m_picture_url: true,
                       m_picture_path: true,
-                      m_is_deleted: true,
+
+                      // 🔑 fetch outlet_menu entry for subitem
+                      outlet_menu: {
+                        where: {
+                          om_o_id: outletId,
+                          om_is_deleted: false,
+                        },
+                        select: {
+                          om_id: true,
+                          om_price: true,
+                          om_stock: true,
+                          om_is_selling: true,
+                        },
+                      },
                     },
                   },
                 },
@@ -177,44 +186,8 @@ export const outletMenuController = {
         },
       });
 
-      const subitemIds = [
-        ...new Set(
-          result.flatMap((item) =>
-            item.menu.menu_subitem_childs.map((c) => c.subitem.m_id)
-          )
-        ),
-      ];
-
-      const subitemOutletMenus = await db.outlet_menu.findMany({
-        where: {
-          om_o_id: outletId,
-          om_m_id: { in: subitemIds },
-          om_is_deleted: false,
-        },
-        select: {
-          om_m_id: true,
-          om_price: true,
-          om_stock: true,
-          om_is_selling: true,
-        },
-      });
-
-      const subitemPriceMap = new Map(
-        subitemOutletMenus.map((s) => [
-          s.om_m_id,
-          {
-            price: s.om_price,
-            stock: s.om_stock,
-            is_selling: s.om_is_selling,
-          },
-        ])
-      );
-
       return result.map((item) => {
-        const cleanMenu = removeColumnPrefix(item.menu);
-
-        // remove redundancy explicitly
-        delete (cleanMenu as any).menu_subitem_childs;
+        const cleanedMenu = removeColumnPrefix(item.menu);
 
         return {
           id: item.om_id,
@@ -223,30 +196,26 @@ export const outletMenuController = {
           is_selling: item.om_is_selling,
 
           menu: {
-            ...cleanMenu,
+            ...cleanedMenu,
 
-            ssubitems: Array.from(
-              new Map(
-                item.menu.menu_subitem_childs.map(({ subitem }) => [
-                  subitem.m_id,
-                  subitem,
-                ])
-              ).values()
-            ).map((subitem) => {
-              const outletData = subitemPriceMap.get(subitem.m_id);
+            menu_subitem_childs:
+              cleanedMenu.menu_subitem_childs?.map((msc: any) => {
+                const subOutletMenu = msc.subitem.outlet_menu?.[0];
 
-              return {
-                ...removeColumnPrefix(subitem),
-                price: outletData?.price ?? null,
-                stock: outletData?.stock ?? null,
-                is_selling: outletData?.is_selling ?? false,
-              };
-            }),
+                return {
+                  id: subOutletMenu?.id ?? null,
+                  price: subOutletMenu?.price ?? null,
+                  stock: subOutletMenu?.stock ?? null,
+                  is_selling: subOutletMenu?.is_selling ?? false,
+
+                  subitem: removeColumnPrefix(msc.subitem),
+                };
+              }) ?? [],
           },
         };
       });
     } catch (error) {
-      console.error("getOutletMenusByOutletId error:", error);
+      console.error("getOutletMenuByOutletId error:", error);
       throw error;
     }
   },
