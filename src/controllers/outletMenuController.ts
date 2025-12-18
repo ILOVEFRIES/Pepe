@@ -161,7 +161,6 @@ export const outletMenuController = {
               m_picture_url: true,
               m_picture_path: true,
               m_is_subitem: true,
-
               menu_subitem_childs: {
                 select: {
                   subitem: {
@@ -181,27 +180,6 @@ export const outletMenuController = {
             },
           },
         },
-      });
-
-      /* 🔍 HIGH-VALUE DEBUG LOGS */
-      console.log("Outlet ID:", outletId);
-      console.log("Total outlet menus:", result.length);
-
-      result.forEach((item, index) => {
-        console.log(`\n[${index}] OutletMenu ID:`, item.om_id);
-        console.log("Menu exists:", !!item.menu);
-        console.log("Menu ID:", item.menu?.m_id);
-        console.log("Menu name:", item.menu?.m_name);
-        console.log("Is subitem:", item.menu?.m_is_subitem);
-
-        console.log(
-          "menu_subitem_childs exists:",
-          Array.isArray(item.menu?.menu_subitem_childs)
-        );
-        console.log(
-          "menu_subitem_childs length:",
-          item.menu?.menu_subitem_childs?.length ?? "undefined"
-        );
       });
 
       return result.map((item) => ({
