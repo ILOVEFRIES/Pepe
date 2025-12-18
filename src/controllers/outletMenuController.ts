@@ -264,37 +264,26 @@ export const outletMenuController = {
     category?: string;
   }) => {
     try {
-      const keyword = params.keyword?.trim().length
-        ? params.keyword.trim()
-        : undefined;
+      const keyword = params.keyword?.trim() || undefined;
 
       const result = await db.outlet_menu.findMany({
         where: {
           om_o_id: params.outlet_id,
           om_is_deleted: false,
-          om_is_selling: true,
+          om_is_selling: true, // only selling items
           menu: {
             is: {
               m_is_deleted: false,
-              m_is_subitem: false,
-
-              ...(params.category && {
-                m_category: params.category,
-              }),
-
-              ...(keyword && {
-                OR: [{ m_name: { contains: keyword } }],
-              }),
+              ...(params.category && { m_category: params.category }),
+              ...(keyword && { OR: [{ m_name: { contains: keyword } }] }),
             },
           },
         },
-
         orderBy: [
           { om_is_selling: "desc" }, // selling first
           { om_stock: "desc" }, // in-stock first
           { menu: { m_name: "asc" } },
         ],
-
         select: {
           om_id: true,
           om_m_id: true,
@@ -304,7 +293,6 @@ export const outletMenuController = {
           om_is_selling: true,
           om_created_at: true,
           om_updated_at: true,
-
           menu: {
             select: {
               m_id: true,
@@ -320,22 +308,18 @@ export const outletMenuController = {
       });
 
       // CLEAN & FLATTEN
-      const cleanedMenus = result.map((item) => {
-        const cleaned = removeColumnPrefix(item);
-        return {
-          ...cleaned,
-          menu: removeColumnPrefix(item.menu),
-        };
-      });
+      const cleanedMenus = result
+        .filter((item) => item.menu) // remove rows with no menu
+        .map((item) => ({
+          ...removeColumnPrefix(item),
+          menu: removeColumnPrefix(item.menu!),
+        }));
 
-      type GroupedMenus = {
-        category: string;
-        menus: typeof cleanedMenus;
-      };
+      // GROUP BY CATEGORY
+      type GroupedMenus = { category: string; menus: typeof cleanedMenus };
 
       const normalizeCategory = (c?: string) => c?.trim() || "Uncategorized";
 
-      // Use Map instead of plain object to avoid object injection warnings
       const groupedMap = new Map<string, typeof cleanedMenus>();
 
       cleanedMenus.forEach((item) => {
@@ -345,14 +329,14 @@ export const outletMenuController = {
         groupedMap.set(category, arr);
       });
 
-      // Convert Map to array and sort
+      // CONVERT TO SORTED ARRAY
       const groupedArray: GroupedMenus[] = Array.from(groupedMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([category, menus]) => ({
           category,
-          menus: menus
-            .filter((m) => m.menu && m.menu.m_name)
-            .sort((a, b) => a.menu.m_name.localeCompare(b.menu.m_name)),
+          menus: menus.sort((a, b) =>
+            (a.menu?.m_name ?? "").localeCompare(b.menu?.m_name ?? "")
+          ),
         }));
 
       return groupedArray;
