@@ -161,6 +161,7 @@ export const outletMenuController = {
               m_picture_url: true,
               m_picture_path: true,
               m_is_subitem: true,
+
               menu_subitem_childs: {
                 select: {
                   subitem: {
@@ -182,6 +183,39 @@ export const outletMenuController = {
         },
       });
 
+      const subitemIds = Array.from(
+        new Set(
+          result.flatMap((item) =>
+            item.menu.menu_subitem_childs.map((c) => c.subitem.m_id)
+          )
+        )
+      );
+
+      const subitemOutletMenus = await db.outlet_menu.findMany({
+        where: {
+          om_o_id: outletId,
+          om_m_id: { in: subitemIds },
+          om_is_deleted: false,
+        },
+        select: {
+          om_m_id: true,
+          om_price: true,
+          om_stock: true,
+          om_is_selling: true,
+        },
+      });
+
+      const subitemPriceMap = new Map(
+        subitemOutletMenus.map((s) => [
+          s.om_m_id,
+          {
+            price: s.om_price,
+            stock: s.om_stock,
+            is_selling: s.om_is_selling,
+          },
+        ])
+      );
+
       return result.map((item) => ({
         id: item.om_id,
         price: item.om_price,
@@ -190,6 +224,15 @@ export const outletMenuController = {
 
         menu: {
           ...removeColumnPrefix(item.menu),
+
+          subitems: item.menu.menu_subitem_childs.map(({ subitem }) => ({
+            ...removeColumnPrefix(subitem),
+            ...(subitemPriceMap.get(subitem.m_id) ?? {
+              price: null,
+              stock: null,
+              is_selling: false,
+            }),
+          })),
         },
       }));
     } catch (error) {
