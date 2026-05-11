@@ -22,22 +22,18 @@ export async function uploadMenuImage(
 
   const bucketName = process.env.S3_BUCKET_NAME;
 
-  const tempPath = `/tmp/${sku}.webp`;
+  // const tempPath = `/tmp/${sku}.webp`;
 
-  await fs.writeFile(tempPath, buffer);
+  // await fs.writeFile(tempPath, buffer);
 
-  try {
-    const result = await minioClient.fPutObject(bucketName!, path, tempPath, {
-      "Content-Type": mime,
-    });
+  readable.end(buffer);
 
-    console.log("result: ", result);
-  } finally {
-    await fs.unlink(tempPath).catch(console.error);
-  }
+  await minioClient.putObject(bucketName!, path, readable, buffer.length, {
+    "Content-Type": mime,
+  });
 
   return {
-    url: `https://${process.env.S3_ENDPOINT}/${bucketName}/${path}`,
+    url: `https://${process.env.S3_DOWNLOAD_URL}/${bucketName}/${path}`,
     path,
   };
 }
