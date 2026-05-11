@@ -1,21 +1,27 @@
 import { bucket } from "../util/firebase";
+import { minioClient } from "../util/minio";
 
 export async function uploadMenuImage(
   buffer: Buffer,
   sku: string,
-  mime: string
+  mime: string,
 ) {
+  const S3Endpoint = process.env.S3_ENDPOINT;
+  const S3Bucket = process.env.S3_BUCKET_NAME;
+
   const path = `menu/${sku}.webp`;
   const file = bucket.file(path);
 
-  await file.save(buffer, {
-    contentType: mime,
-    resumable: false,
-    public: true,
-  });
+  // await file.save(buffer, {
+  //   contentType: mime,
+  //   resumable: false,
+  //   public: true,
+  // });
+
+  await minioClient.putObject(S3Bucket, `${path}`, buffer);
 
   return {
-    url: `https://storage.googleapis.com/${bucket.name}/${path}`,
+    url: `${S3Endpoint}/${path}`,
     path,
   };
 }
