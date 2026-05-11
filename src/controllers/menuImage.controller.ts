@@ -31,7 +31,7 @@ export async function uploadMenuImage(
   });
 
   return {
-    url: `https://${process.env.S3_DOWNLOAD_URL}/${bucketName}/${path}`,
+    url: `${process.env.S3_DOWNLOAD_URL}/${bucketName}/${path}`,
     path,
   };
 }
