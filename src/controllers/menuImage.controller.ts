@@ -1,6 +1,6 @@
 import { bucket } from "../util/firebase";
 import { minioClient } from "../util/minio";
-import { Readable } from "stream";
+import stream from "stream";
 
 export async function uploadMenuImage(
   buffer: Buffer,
@@ -16,7 +16,8 @@ export async function uploadMenuImage(
   //   public: true,
   // });
 
-  const stream = Readable.from(buffer);
+  const readable = new stream.PassThrough();
+  readable.end(buffer);
 
   const bucketName = process.env.S3_BUCKET_NAME;
 
@@ -25,7 +26,7 @@ export async function uploadMenuImage(
   const result = await minioClient.putObject(
     bucket,
     path,
-    stream,
+    readable,
     buffer.length,
     {
       "Content-Type": mime,
