@@ -26,8 +26,6 @@ export async function uploadMenuImage(
 
   // await fs.writeFile(tempPath, buffer);
 
-  readable.end(buffer);
-
   await minioClient.putObject(bucketName!, path, readable, buffer.length, {
     "Content-Type": mime,
   });
