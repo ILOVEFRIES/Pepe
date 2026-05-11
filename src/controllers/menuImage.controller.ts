@@ -6,9 +6,6 @@ export async function uploadMenuImage(
   sku: string,
   mime: string,
 ) {
-  const S3Endpoint = process.env.S3_ENDPOINT;
-  const S3Bucket = process.env.S3_BUCKET_NAME;
-
   const path = `menu/${sku}.webp`;
   const file = bucket.file(path);
 
@@ -18,12 +15,22 @@ export async function uploadMenuImage(
   //   public: true,
   // });
 
-  const uploadImage = await minioClient.putObject(S3Bucket, `${path}`, buffer);
+  const bucketName = process.env.S3_BUCKET_NAME!;
 
-  console.log("uploadImage: ", uploadImage);
+  const result = await minioClient.putObject(
+    bucketName,
+    path,
+    buffer,
+    buffer.length,
+    {
+      "Content-Type": mime,
+    },
+  );
+
+  console.log("upload result:", result);
 
   return {
-    url: `${S3Endpoint}/${path}`,
+    url: `https://${process.env.S3_ENDPOINT}/${bucketName}/${path}`,
     path,
   };
 }

@@ -1,15 +1,9 @@
-var Minio = require("minio");
-
-const S3Endpoint = process.env.S3_ENDPOINT;
-const S3Port = process.env.S3_PORT;
-const accessKey = process.env.S3_ACCESS_KEY;
-const secretKey = process.env.S3_SECRET_KEY;
-const bucketName = process.env.S3_BUCKET;
+import Minio from "minio";
 
 export const minioClient = new Minio.Client({
-  endPoint: S3Endpoint,
-  port: S3Port,
+  endPoint: process.env.S3_ENDPOINT!,
+  port: 9091,
   useSSL: true,
-  accessKey: accessKey,
-  secretKey: secretKey,
+  accessKey: process.env.S3_ACCESS_KEY_ID!,
+  secretKey: process.env.S3_SECRET_ACCESS_KEY!,
 });
