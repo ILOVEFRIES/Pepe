@@ -26,11 +26,15 @@ export async function uploadMenuImage(
 
   await fs.writeFile(tempPath, buffer);
 
-  const result = await minioClient.fPutObject(bucketName!, path, tempPath, {
-    "Content-Type": mime,
-  });
+  try {
+    const result = await minioClient.fPutObject(bucketName!, path, tempPath, {
+      "Content-Type": mime,
+    });
 
-  console.log("upload result:", result);
+    console.log("result: ", result);
+  } finally {
+    await fs.unlink(tempPath).catch(console.error);
+  }
 
   return {
     url: `https://${process.env.S3_ENDPOINT}/${bucketName}/${path}`,
