@@ -1,4 +1,4 @@
-import Minio from "minio";
+var Minio = require("minio");
 
 export const minioClient = new Minio.Client({
   endPoint: process.env.S3_ENDPOINT!,
