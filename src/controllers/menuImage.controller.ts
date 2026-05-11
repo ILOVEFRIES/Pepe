@@ -17,6 +17,8 @@ export async function uploadMenuImage(
 
   const bucketName = process.env.S3_BUCKET_NAME;
 
+  console.log("bucketName:", bucketName);
+
   const result = await minioClient.putObject(bucket, `${path}`, buffer);
 
   console.log("upload result:", result);
