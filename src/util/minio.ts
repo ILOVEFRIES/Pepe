@@ -3,7 +3,7 @@ var Minio = require("minio");
 export const minioClient = new Minio.Client({
   endPoint: process.env.S3_ENDPOINT,
   port: 9090,
-  useSSL: true,
+  useSSL: false,
   accessKey: process.env.S3_ACCESS_KEY_ID,
   secretKey: process.env.S3_SECRET_ACCESS_KEY,
 });
